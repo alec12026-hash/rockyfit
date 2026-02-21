@@ -11,3 +11,11 @@ export async function saveLog(exerciseId: string, weight: number, sets: number, 
     VALUES (${exerciseId}, ${weight}, ${sets}, ${reps}, ${rpe}, NOW())
   `;
 }
+
+// NEW: Get the last log for a specific exercise to calculate progressive overload target
+export async function getLastLog(exerciseId: string) {
+  // In a real app, this would query the DB. 
+  // For the demo without a live DB connection, we return null or a mock.
+  // We'll update the API route to handle this DB query.
+  return null; 
+}
