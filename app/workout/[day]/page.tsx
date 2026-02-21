@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getWorkoutById } from '@/lib/program'; 
-import { ArrowLeft, Copy, Save, Repeat } from 'lucide-react'; // Added Repeat icon
+import { ArrowLeft, ArrowRight, Copy, Save, Repeat } from 'lucide-react'; // Added Repeat icon
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
