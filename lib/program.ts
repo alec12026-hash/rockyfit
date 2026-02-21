@@ -1,9 +1,14 @@
+// ----------------------------------------------------------------------
+// DATA TYPES
+// ----------------------------------------------------------------------
+
 export type Exercise = {
   id: string;
   name: string;
   sets: number;
   reps: string;
   rest: string;
+  rpe?: string;
   notes?: string;
 };
 
@@ -17,70 +22,133 @@ export type WorkoutDay = {
 export type Week = {
   id: string;
   number: number;
-  days: Record<string, WorkoutDay>;
+  // We use a flat array for the default order, but users can shuffle them.
+  // "days" is just the *template* for that week.
+  days: WorkoutDay[];
 };
 
-// Base templates for A/B split
-const PUSH_A: WorkoutDay = {
+// ----------------------------------------------------------------------
+// EXERCISE DATABASE (Source: RP & Hevy Advanced PPL)
+// ----------------------------------------------------------------------
+
+const EXERCISES = {
+  // Push
+  bench_press: { id: 'bench_press', name: 'Bench Press', sets: 3, reps: '8-10', rest: '3 min', rpe: '8-9', notes: 'Full ROM, control eccentric.' },
+  ohp_seated: { id: 'ohp_seated', name: 'Seated Overhead Press', sets: 3, reps: '8-10', rest: '3 min', rpe: '8-9', notes: 'Back supported.' },
+  incline_db: { id: 'incline_db', name: 'Incline DB Press', sets: 3, reps: '10-12', rest: '2-3 min', rpe: '8', notes: '30 degree bench.' },
+  lat_raise_cable: { id: 'lat_raise_cable', name: 'Cable Lateral Raise', sets: 4, reps: '12-15', rest: '90 sec', rpe: '9-10', notes: 'Focus on side delt.' },
+  tricep_pushdown: { id: 'tricep_pushdown', name: 'Tricep Rope Pushdown', sets: 3, reps: '12-15', rest: '90 sec', rpe: '9', notes: 'Spread rope at bottom.' },
+  overhead_tri: { id: 'overhead_tri', name: 'Overhead Tricep Ext', sets: 3, reps: '10-15', rest: '90 sec', rpe: '9', notes: 'Cable or DB.' },
+  pec_deck: { id: 'pec_deck', name: 'Pec Deck / Fly', sets: 3, reps: '15-20', rest: '90 sec', rpe: '10', notes: 'Squeeze peak contraction.' },
+
+  // Pull
+  pullup: { id: 'pullup', name: 'Weighted Pullup', sets: 3, reps: '6-10', rest: '3 min', rpe: '9', notes: 'Full hang at bottom.' },
+  bb_row: { id: 'bb_row', name: 'Barbell Row', sets: 3, reps: '8-10', rest: '2-3 min', rpe: '8-9', notes: 'Torso 45-60 degrees.' },
+  lat_pulldown: { id: 'lat_pulldown', name: 'Lat Pulldown', sets: 3, reps: '10-15', rest: '2 min', rpe: '9', notes: 'Medium grip.' },
+  cable_row: { id: 'cable_row', name: 'Seated Cable Row', sets: 3, reps: '10-15', rest: '2 min', rpe: '9', notes: 'Full stretch.' },
+  face_pull: { id: 'face_pull', name: 'Face Pull', sets: 4, reps: '15-20', rest: '90 sec', rpe: '8', notes: 'External rotation focus.' },
+  hammer_curl: { id: 'hammer_curl', name: 'DB Hammer Curl', sets: 3, reps: '10-12', rest: '90 sec', rpe: '9', notes: 'Elbows fixed.' },
+  bicep_curl_machine: { id: 'bicep_curl_machine', name: 'Machine Preacher Curl', sets: 3, reps: '12-15', rest: '90 sec', rpe: '10', notes: 'Full stretch.' },
+
+  // Legs
+  squat: { id: 'squat', name: 'Barbell Squat', sets: 3, reps: '6-10', rest: '3-5 min', rpe: '8', notes: 'High bar, deep.' },
+  rdl: { id: 'rdl', name: 'Romanian Deadlift', sets: 3, reps: '8-12', rest: '3 min', rpe: '8', notes: 'Hips back, shin vertical.' },
+  leg_press: { id: 'leg_press', name: 'Leg Press', sets: 3, reps: '10-15', rest: '3 min', rpe: '9', notes: 'Feet low for quad bias.' },
+  leg_curl: { id: 'leg_curl', name: 'Lying Leg Curl', sets: 3, reps: '12-15', rest: '2 min', rpe: '10', notes: 'Control eccentric.' },
+  leg_ext: { id: 'leg_ext', name: 'Leg Extension', sets: 3, reps: '15-20', rest: '90 sec', rpe: '10', notes: 'Pause at top.' },
+  calf_raise: { id: 'calf_raise', name: 'Standing Calf Raise', sets: 4, reps: '10-15', rest: '60 sec', rpe: '9', notes: 'Pause at bottom.' },
+};
+
+// ----------------------------------------------------------------------
+// WORKOUT TEMPLATES
+// ----------------------------------------------------------------------
+
+const PUSH_A_TEMPLATE: WorkoutDay = {
   id: 'push_a',
   title: 'Push A',
-  focus: 'Chest & Front Delts',
-  exercises: [
-    { id: 'bench_press', name: 'Barbell Bench Press', sets: 4, reps: '6-8', rest: '3 min', notes: 'Heavy compound. Focus on control.' },
-    { id: 'ohp', name: 'Overhead Press', sets: 3, reps: '8-10', rest: '2-3 min', notes: 'Standing. Brace core.' },
-    { id: 'inc_db_press', name: 'Incline DB Press', sets: 3, reps: '10-12', rest: '2 min', notes: '30 degree incline.' },
-    { id: 'lat_raise', name: 'Cable Lateral Raise', sets: 4, reps: '15-20', rest: '90 sec', notes: 'Control the eccentric.' },
-    { id: 'tri_pushdown', name: 'Tricep Pushdown', sets: 3, reps: '12-15', rest: '90 sec', notes: 'Rope attachment.' }
-  ]
+  focus: 'Chest & Delts',
+  exercises: [EXERCISES.bench_press, EXERCISES.ohp_seated, EXERCISES.incline_db, EXERCISES.lat_raise_cable, EXERCISES.tricep_pushdown]
 };
 
-const PULL_A: WorkoutDay = {
+const PULL_A_TEMPLATE: WorkoutDay = {
   id: 'pull_a',
   title: 'Pull A',
-  focus: 'Back Thickness & Biceps',
-  exercises: [
-    { id: 'deadlift', name: 'Deadlift', sets: 3, reps: '5', rest: '3-5 min', notes: 'Conventional or Sumo.' },
-    { id: 'pullup', name: 'Weighted Pullups', sets: 3, reps: '6-8', rest: '3 min', notes: 'Full ROM.' },
-    { id: 'chest_supp_row', name: 'Chest Supported Row', sets: 3, reps: '10-12', rest: '2 min', notes: 'Squeeze at top.' },
-    { id: 'face_pull', name: 'Face Pulls', sets: 4, reps: '15-20', rest: '90 sec', notes: 'Focus on rear delts.' },
-    { id: 'hammer_curl', name: 'Hammer Curls', sets: 3, reps: '10-12', rest: '90 sec', notes: 'DB or Cable.' }
-  ]
+  focus: 'Lats & Thickness',
+  exercises: [EXERCISES.pullup, EXERCISES.bb_row, EXERCISES.lat_pulldown, EXERCISES.face_pull, EXERCISES.hammer_curl]
 };
 
-const LEGS_A: WorkoutDay = {
+const LEGS_A_TEMPLATE: WorkoutDay = {
   id: 'legs_a',
   title: 'Legs A',
   focus: 'Squat & Quads',
-  exercises: [
-    { id: 'squat', name: 'Back Squat', sets: 4, reps: '6-8', rest: '3-5 min', notes: 'High bar preferably.' },
-    { id: 'rdl', name: 'Romanian Deadlift', sets: 3, reps: '8-10', rest: '3 min', notes: 'Feel the stretch.' },
-    { id: 'leg_press', name: 'Leg Press', sets: 3, reps: '12-15', rest: '2 min', notes: 'Feet low for quad focus.' },
-    { id: 'leg_ext', name: 'Leg Extension', sets: 3, reps: '15-20', rest: '90 sec', notes: 'Drop set on last set.' },
-    { id: 'calf_raise', name: 'Standing Calf Raise', sets: 4, reps: '15-20', rest: '60 sec', notes: 'Slow tempo.' }
-  ]
+  exercises: [EXERCISES.squat, EXERCISES.rdl, EXERCISES.leg_press, EXERCISES.leg_ext, EXERCISES.calf_raise]
 };
 
-// Generate 8 weeks of data
-export const WEEKS: Week[] = Array.from({ length: 8 }, (_, i) => ({
-  id: `week_${i + 1}`,
-  number: i + 1,
-  days: {
-    'monday': { ...PUSH_A, id: 'push_a' },
-    'tuesday': { ...PULL_A, id: 'pull_a' },
-    'wednesday': { ...LEGS_A, id: 'legs_a' },
-    'thursday': { ...PUSH_A, id: 'push_a_2' }, 
-    'friday': { ...PULL_A, id: 'pull_a_2' },   
-    'saturday': { ...LEGS_A, id: 'legs_a_2' }, 
-    'sunday': { id: 'rest', title: 'Rest Day', focus: 'Recovery', exercises: [] }
-  }
-}));
+const PUSH_B_TEMPLATE: WorkoutDay = {
+  id: 'push_b',
+  title: 'Push B',
+  focus: 'Incline & Triceps',
+  exercises: [EXERCISES.incline_db, EXERCISES.ohp_seated, EXERCISES.pec_deck, EXERCISES.lat_raise_cable, EXERCISES.overhead_tri]
+};
+
+const PULL_B_TEMPLATE: WorkoutDay = {
+  id: 'pull_b',
+  title: 'Pull B',
+  focus: 'Rows & Biceps',
+  exercises: [EXERCISES.bb_row, EXERCISES.lat_pulldown, EXERCISES.cable_row, EXERCISES.face_pull, EXERCISES.bicep_curl_machine]
+};
+
+const LEGS_B_TEMPLATE: WorkoutDay = {
+  id: 'legs_b',
+  title: 'Legs B',
+  focus: 'Hams & Glutes',
+  exercises: [EXERCISES.rdl, EXERCISES.leg_press, EXERCISES.leg_curl, EXERCISES.leg_ext, EXERCISES.calf_raise]
+};
+
+// ----------------------------------------------------------------------
+// WEEK GENERATOR
+// ----------------------------------------------------------------------
+
+const BASE_WEEK_DAYS = [
+  { ...PUSH_A_TEMPLATE }, // Mon
+  { ...PULL_A_TEMPLATE }, // Tue
+  { ...LEGS_A_TEMPLATE }, // Wed
+  { ...PUSH_B_TEMPLATE }, // Thu
+  { ...PULL_B_TEMPLATE }, // Fri
+  { ...LEGS_B_TEMPLATE }, // Sat
+  { id: 'rest', title: 'Rest', focus: 'Recovery', exercises: [] } // Sun
+];
+
+// Generate 8 unique weeks with globally unique IDs for every workout
+export const WEEKS: Week[] = Array.from({ length: 8 }, (_, i) => {
+  const weekNum = i + 1;
+  const days = BASE_WEEK_DAYS.map((day, dayIndex) => ({
+    ...day,
+    // CRITICAL: Unique ID for every single workout instance
+    // e.g., "w1_d0_push_a" (Week 1, Day 0)
+    id: \`w\${weekNum}_d\${dayIndex}_\${day.id}\`
+  }));
+
+  return {
+    id: \`week_\${weekNum}\`,
+    number: weekNum,
+    days: days
+  };
+});
+
+// ----------------------------------------------------------------------
+// LOOKUP HELPERS
+// ----------------------------------------------------------------------
 
 export function getWeek(weekNum: number) {
   return WEEKS.find(w => w.number === weekNum);
 }
 
-// Legacy export for backward compat
-export const PROGRAM = {
-  ...WEEKS[0].days,
-  ...WEEKS[0].days // Just expose week 1 days at root for now
-};
+// Global lookup for ANY workout ID (wX_dY_template)
+export function getWorkoutById(workoutId: string): WorkoutDay | undefined {
+  for (const week of WEEKS) {
+    const found = week.days.find(d => d.id === workoutId);
+    if (found) return found;
+  }
+  return undefined;
+}

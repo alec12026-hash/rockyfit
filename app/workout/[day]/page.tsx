@@ -1,36 +1,50 @@
 'use client';
 
 import { useState } from 'react';
-import { PROGRAM } from '@/lib/program';
+import { getWorkoutById } from '@/lib/program'; // Updated import
 import { ArrowLeft, Copy, Save } from 'lucide-react';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 export default function WorkoutPage({ params }: { params: { day: string } }) {
-  const workout = PROGRAM[params.day];
+  // Use the new lookup helper that scans all weeks
+  const workout = getWorkoutById(params.day);
   
-  // Simple state for demo - in real app, sync this to DB
+  // State for logs
   const [logs, setLogs] = useState<Record<string, any[]>>({});
 
-  if (!workout) return <div>Workout not found</div>;
+  if (!workout) return notFound(); // Standard 404 if ID is bad
 
   return (
     <div className="pb-24">
       {/* Sticky Header */}
       <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 border-b border-zinc-200 px-6 py-4 flex items-center gap-4">
-        <Link href="/" className="p-2 -ml-2 text-secondary hover:text-primary">
+        {/* Helper: go back to the WEEK view, we need to extract week num from ID (w1_...) */}
+        <Link href={\`/week/\${workout.id.split('_')[0].replace('w','')}\`} className="p-2 -ml-2 text-secondary hover:text-primary">
           <ArrowLeft size={20} />
         </Link>
-        <h1 className="font-display font-bold text-xl uppercase">{workout.title}</h1>
+        <div>
+          <h1 className="font-display font-bold text-xl uppercase">{workout.title}</h1>
+          <p className="text-xs text-secondary uppercase tracking-wide">{workout.focus}</p>
+        </div>
       </div>
 
       <div className="p-6 space-y-8">
         {workout.exercises.map((ex, i) => (
           <div key={ex.id} className="scroll-mt-24" id={ex.id}>
-            <div className="mb-3 flex justify-between items-baseline">
-              <h3 className="font-display font-bold text-lg uppercase">{ex.name}</h3>
-              <span className="text-xs font-mono bg-zinc-100 px-2 py-1 rounded text-secondary">
-                {ex.sets} x {ex.reps}
-              </span>
+            <div className="mb-3">
+              <div className="flex justify-between items-baseline mb-1">
+                <h3 className="font-display font-bold text-lg uppercase">{ex.name}</h3>
+                <span className="text-xs font-mono bg-zinc-100 px-2 py-1 rounded text-secondary border border-zinc-200">
+                  {ex.sets} x {ex.reps}
+                </span>
+              </div>
+              {/* Meta Row */}
+              <div className="flex gap-3 text-[10px] uppercase font-bold text-zinc-400 tracking-wider">
+                <span>Rest: {ex.rest}</span>
+                {ex.rpe && <span>RPE: {ex.rpe}</span>}
+              </div>
+              {ex.notes && <p className="text-xs text-secondary mt-1 italic">Note: {ex.notes}</p>}
             </div>
             
             {/* Input Grid */}
@@ -73,7 +87,7 @@ export default function WorkoutPage({ params }: { params: { day: string } }) {
 
       {/* Footer Action */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-surface border-t border-zinc-200 max-w-md mx-auto">
-        <button className="w-full bg-primary text-white font-display font-bold text-lg uppercase py-4 rounded-md shadow-lg flex items-center justify-center gap-2">
+        <button className="w-full bg-primary text-white font-display font-bold text-lg uppercase py-4 rounded-md shadow-lg flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
           <Save size={20} /> Finish Workout
         </button>
       </div>
