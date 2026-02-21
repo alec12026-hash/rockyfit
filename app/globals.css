@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 24, 24, 27;
+  --background-start-rgb: 248, 249, 250;
+  --background-end-rgb: 248, 249, 250;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: #F8F9FA;
+}
+
+/* Custom Utilities */
+.text-stroke-volt {
+  -webkit-text-stroke: 1px #DFFF00;
+  color: transparent;
+}
