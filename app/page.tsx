@@ -1,13 +1,16 @@
 import Link from 'next/link';
-import { getRecommendedWorkout } from '@/lib/program';
+import { WEEKS } from '@/lib/program';
+import { ArrowRight } from 'lucide-react';
 
 export default function Home() {
   const today = new Date();
-  const recommended = getRecommendedWorkout(today.getDay());
   const dateStr = today.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
+  // Assume user is on Week 1 for demo
+  const currentWeek = WEEKS[0];
+
   return (
-    <div className="p-6">
+    <div className="p-6 pb-24">
       <header className="mb-8 flex justify-between items-end">
         <div>
           <h1 className="font-display font-bold text-3xl tracking-tighter uppercase">ROCKYFIT</h1>
@@ -16,53 +19,32 @@ export default function Home() {
         <div className="h-8 w-8 bg-primary rounded-full"></div>
       </header>
 
-      <section className="mb-10">
-        <h2 className="font-display font-semibold text-lg mb-4 uppercase text-secondary">Today's Protocol</h2>
-        {recommended ? (
-          <Link href={`/workout/${recommended.id}`}>
-            <div className="bg-primary text-white p-6 rounded-md shadow-lifted active:scale-[0.98] transition-transform">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-display text-2xl font-bold uppercase">{recommended.title}</h3>
-                <span className="text-accent text-xs font-bold px-2 py-1 border border-accent rounded-sm uppercase">Next Up</span>
-              </div>
-              <p className="text-zinc-400 text-sm mb-4 font-body">{recommended.focus}</p>
-              <div className="flex gap-2">
-                 <button className="bg-accent text-black font-display font-bold text-sm uppercase px-4 py-2 rounded-sm w-full">
-                   Start Session
-                 </button>
-              </div>
-            </div>
-          </Link>
-        ) : (
-          <div className="bg-zinc-100 p-6 rounded-md border border-zinc-200">
-            <h3 className="font-display text-xl font-bold uppercase text-zinc-400">Rest Day</h3>
-            <p className="text-secondary text-sm">Recover. Hydrate. Sleep.</p>
-          </div>
-        )}
-      </section>
-
-      <section>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="font-display font-semibold text-lg uppercase text-secondary">Quick Select</h2>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          {['push_a', 'pull_a', 'legs_a'].map(id => (
-            <Link key={id} href={`/workout/${id}`}>
-              <div className="bg-surface border border-zinc-200 p-4 rounded-md hover:border-primary transition-colors">
-                <span className="font-display font-bold uppercase block">{id.replace('_', ' ')}</span>
+      <section className="space-y-6">
+        <h2 className="font-display font-semibold text-lg uppercase text-secondary border-b border-zinc-200 pb-2">Program Overview</h2>
+        
+        <div className="space-y-4">
+          {WEEKS.map((week) => (
+            <Link key={week.id} href={\`/week/\${week.number}\`}>
+              <div className="group bg-surface border border-zinc-200 p-5 rounded-md hover:border-primary transition-all shadow-subtle active:scale-[0.99]">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="text-xs font-bold text-accent uppercase tracking-wider mb-1 block">Week {week.number}</span>
+                    <h3 className="font-display font-bold text-xl uppercase text-primary group-hover:text-black">Hypertrophy Phase 1</h3>
+                  </div>
+                  <ArrowRight size={20} className="text-zinc-300 group-hover:text-primary transition-colors" />
+                </div>
+                <div className="mt-3 flex gap-1">
+                  {['M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                    <div key={i} className="h-1 flex-1 bg-zinc-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-accent w-0 group-hover:w-full transition-all duration-500 delay-100" style={{ width: i < 3 ? '100%' : '0%' }}></div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </Link>
           ))}
         </div>
       </section>
-      
-      {/* AI Insight Teaser */}
-      <div className="mt-8 p-4 bg-zinc-50 border-l-4 border-accent rounded-r-md">
-        <h4 className="font-display font-bold text-sm uppercase mb-1">Coach Rocky</h4>
-        <p className="text-xs text-secondary leading-relaxed">
-          Last session your bench velocity slowed on set 3. Focus on explosive concentric today.
-        </p>
-      </div>
     </div>
   );
 }
