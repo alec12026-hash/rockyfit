@@ -36,7 +36,7 @@ export default function WeekPage({ params }: { params: { num: string } }) {
       <div className="p-6 space-y-4">
         {days.map((day) => (
           day.exercises.length > 0 ? (
-            <Link key={day.key} href={\`/workout/\${day.id}\`}>
+            <Link key={day.key} href={`/workout/${day.id}`}>
               <div className="bg-surface p-4 rounded-md border border-zinc-200 shadow-subtle hover:border-accent hover:shadow-md transition-all active:scale-[0.99] flex items-center justify-between group">
                 <div className="flex items-start gap-4">
                   <div className="flex flex-col items-center justify-center bg-zinc-50 w-12 h-12 rounded-sm border border-zinc-100">

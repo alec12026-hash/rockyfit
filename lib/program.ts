@@ -62,15 +62,15 @@ const LEGS_A: WorkoutDay = {
 
 // Generate 8 weeks of data
 export const WEEKS: Week[] = Array.from({ length: 8 }, (_, i) => ({
-  id: \`week_\${i + 1}\`,
+  id: `week_${i + 1}`,
   number: i + 1,
   days: {
     'monday': { ...PUSH_A, id: 'push_a' },
     'tuesday': { ...PULL_A, id: 'pull_a' },
     'wednesday': { ...LEGS_A, id: 'legs_a' },
-    'thursday': { ...PUSH_A, id: 'push_a_2' }, // In real app, make Push B
-    'friday': { ...PULL_A, id: 'pull_a_2' },   // In real app, make Pull B
-    'saturday': { ...LEGS_A, id: 'legs_a_2' }, // In real app, make Legs B
+    'thursday': { ...PUSH_A, id: 'push_a_2' }, 
+    'friday': { ...PULL_A, id: 'pull_a_2' },   
+    'saturday': { ...LEGS_A, id: 'legs_a_2' }, 
     'sunday': { id: 'rest', title: 'Rest Day', focus: 'Recovery', exercises: [] }
   }
 }));
@@ -78,3 +78,9 @@ export const WEEKS: Week[] = Array.from({ length: 8 }, (_, i) => ({
 export function getWeek(weekNum: number) {
   return WEEKS.find(w => w.number === weekNum);
 }
+
+// Legacy export for backward compat
+export const PROGRAM = {
+  ...WEEKS[0].days,
+  ...WEEKS[0].days // Just expose week 1 days at root for now
+};

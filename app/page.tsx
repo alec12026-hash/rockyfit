@@ -24,7 +24,7 @@ export default function Home() {
         
         <div className="space-y-4">
           {WEEKS.map((week) => (
-            <Link key={week.id} href={\`/week/\${week.number}\`}>
+            <Link key={week.id} href={`/week/${week.number}`}>
               <div className="group bg-surface border border-zinc-200 p-5 rounded-md hover:border-primary transition-all shadow-subtle active:scale-[0.99]">
                 <div className="flex justify-between items-center">
                   <div>
