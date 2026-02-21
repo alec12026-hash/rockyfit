@@ -20,7 +20,7 @@ export default function WorkoutPage({ params }: { params: { day: string } }) {
       {/* Sticky Header */}
       <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 border-b border-zinc-200 px-6 py-4 flex items-center gap-4">
         {/* Helper: go back to the WEEK view, we need to extract week num from ID (w1_...) */}
-        <Link href={\`/week/\${workout.id.split('_')[0].replace('w','')}\`} className="p-2 -ml-2 text-secondary hover:text-primary">
+        <Link href={`/week/${workout.id.split('_')[0].replace('w','')}`} className="p-2 -ml-2 text-secondary hover:text-primary">
           <ArrowLeft size={20} />
         </Link>
         <div>

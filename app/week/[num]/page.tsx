@@ -22,7 +22,7 @@ export default function WeekPage({ params }: { params: { num: string } }) {
 
   // 2. Hydrate from localStorage on mount (Client-side only)
   useEffect(() => {
-    const saved = localStorage.getItem(\`rockyfit_week_\${weekNum}_schedule\`);
+    const saved = localStorage.getItem(`rockyfit_week_${weekNum}_schedule`);
     if (saved) {
       try {
         setDays(JSON.parse(saved));
@@ -43,7 +43,7 @@ export default function WeekPage({ params }: { params: { num: string } }) {
     [newDays[fromIndex], newDays[toIndex]] = [newDays[toIndex], newDays[fromIndex]];
     
     setDays(newDays);
-    localStorage.setItem(\`rockyfit_week_\${weekNum}_schedule\`, JSON.stringify(newDays));
+    localStorage.setItem(`rockyfit_week_${weekNum}_schedule`, JSON.stringify(newDays));
   };
 
   return (
@@ -58,7 +58,7 @@ export default function WeekPage({ params }: { params: { num: string } }) {
         </div>
         <button 
           onClick={() => setIsEditMode(!isEditMode)}
-          className={\`p-2 rounded-sm transition-colors \${isEditMode ? 'bg-accent text-black' : 'text-secondary hover:bg-zinc-100'}\`}
+          className={`p-2 rounded-sm transition-colors ${isEditMode ? 'bg-accent text-black' : 'text-secondary hover:bg-zinc-100'}`}
         >
           <ArrowLeftRight size={20} />
         </button>
@@ -76,8 +76,8 @@ export default function WeekPage({ params }: { params: { num: string } }) {
             
             {/* Main Card */}
             {day.exercises.length > 0 ? (
-              <Link href={isEditMode ? '#' : \`/workout/\${day.id}\`} className={isEditMode ? 'pointer-events-none' : ''}>
-                <div className={\`bg-surface p-4 rounded-md border shadow-subtle flex items-center justify-between group transition-all \${isEditMode ? 'border-dashed border-zinc-300 opacity-90' : 'border-zinc-200 hover:border-accent hover:shadow-md active:scale-[0.99]'}\`}>
+              <Link href={isEditMode ? '#' : `/workout/${day.id}`} className={isEditMode ? 'pointer-events-none' : ''}>
+                <div className={`bg-surface p-4 rounded-md border shadow-subtle flex items-center justify-between group transition-all ${isEditMode ? 'border-dashed border-zinc-300 opacity-90' : 'border-zinc-200 hover:border-accent hover:shadow-md active:scale-[0.99]'}`}>
                   <div className="flex items-start gap-4">
                     <div className="flex flex-col items-center justify-center bg-zinc-50 w-12 h-12 rounded-sm border border-zinc-100 shrink-0">
                       {/* Label is fixed to the SLOT (index), not the workout */}

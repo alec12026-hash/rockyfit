@@ -126,11 +126,11 @@ export const WEEKS: Week[] = Array.from({ length: 8 }, (_, i) => {
     ...day,
     // CRITICAL: Unique ID for every single workout instance
     // e.g., "w1_d0_push_a" (Week 1, Day 0)
-    id: \`w\${weekNum}_d\${dayIndex}_\${day.id}\`
+    id: `w${weekNum}_d${dayIndex}_${day.id}`
   }));
 
   return {
-    id: \`week_\${weekNum}\`,
+    id: `week_${weekNum}`,
     number: weekNum,
     days: days
   };
