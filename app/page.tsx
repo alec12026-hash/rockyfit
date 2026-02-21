@@ -1,10 +1,18 @@
 import Link from 'next/link';
 import { WEEKS } from '@/lib/program';
 import { ArrowRight, TrendingUp } from 'lucide-react';
+import { getLatestReadiness } from '@/lib/db';
 
-export default function Home() {
+export default async function Home() {
   const today = new Date();
   const dateStr = today.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+  let readiness: any = null;
+  try {
+    readiness = await getLatestReadiness();
+  } catch {
+    readiness = null;
+  }
 
   // Feature 2: Stock Market Analytics (Mock Data)
   const benchTrend = [225, 230, 230, 235, 240, 245]; // Trending up
@@ -18,6 +26,19 @@ export default function Home() {
         </div>
         <div className="h-8 w-8 bg-primary rounded-full"></div>
       </header>
+
+      <section className="mb-6 bg-surface border border-zinc-200 rounded-md p-4 shadow-subtle">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display font-bold text-lg uppercase">Recovery Readiness</h2>
+          <span className={`text-xs font-bold uppercase px-2 py-1 rounded-sm ${readiness?.readiness_zone === 'green' ? 'bg-green-100 text-green-700' : readiness?.readiness_zone === 'yellow' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+            {readiness?.readiness_zone || 'No Data'}
+          </span>
+        </div>
+        <p className="text-2xl font-display font-bold mt-2">{readiness?.readiness_score ?? '--'}/100</p>
+        <p className="text-xs text-secondary mt-1">
+          {readiness ? `Sleep ${readiness.sleep_hours ?? '--'}h • HRV ${readiness.hrv ?? '--'} • RHR ${readiness.resting_hr ?? '--'}` : 'Upload Apple Health data to unlock daily recommendations.'}
+        </p>
+      </section>
 
       {/* Feature 2: Analytics Dashboard */}
       <section className="mb-8">
