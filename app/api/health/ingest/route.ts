@@ -104,6 +104,6 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error('health ingest failed', err);
-    return NextResponse.json({ error: 'Failed to ingest health data' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to ingest health data', detail: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }
