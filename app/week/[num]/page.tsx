@@ -1,6 +1,6 @@
 'use client';
 
-import { getWeek } from '@/lib/program';
+import { getWeek, type WorkoutDay } from '@/lib/program';
 import { ArrowLeft, ArrowRight, Calendar, ArrowLeftRight } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -23,14 +23,37 @@ export default function WeekPage({ params }: { params: { num: string } }) {
   // 2. Hydrate from localStorage on mount (Client-side only)
   useEffect(() => {
     const saved = localStorage.getItem(`rockyfit_week_${weekNum}_schedule`);
-    if (saved) {
-      try {
-        setDays(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse schedule", e);
+    if (!saved) return;
+
+    try {
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return;
+
+      // Migrate/normalize legacy saved schedules (old IDs or partial objects)
+      const normalizedDays: WorkoutDay[] = parsed
+        .map((rawDay: any, idx: number) => {
+          const rawId = typeof rawDay === 'string' ? rawDay : rawDay?.id;
+
+          // 1) Exact match (current format: w1_d0_push_a)
+          const exact = defaultWeek.days.find(d => d.id === rawId);
+          if (exact) return exact;
+
+          // 2) Legacy suffix match (old format: push_a)
+          const suffixMatch = defaultWeek.days.find(d => d.id.endsWith(`_${rawId}`));
+          if (suffixMatch) return suffixMatch;
+
+          // 3) Fallback to day slot so we always render a valid workout card
+          return defaultWeek.days[idx];
+        })
+        .filter(Boolean);
+
+      if (normalizedDays.length === defaultWeek.days.length) {
+        setDays(normalizedDays);
       }
+    } catch (e) {
+      console.error('Failed to parse schedule', e);
     }
-  }, [weekNum]);
+  }, [weekNum, defaultWeek.days]);
 
   // 3. Move Handler
   const moveDay = (fromIndex: number, direction: 'up' | 'down') => {
