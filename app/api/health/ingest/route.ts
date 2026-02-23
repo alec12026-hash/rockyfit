@@ -45,6 +45,14 @@ export async function POST(req: Request) {
     }
 
     const body = (await req.json()) as IngestBody;
+
+    // Helper: coerce any value to a number or null (handles "", null, undefined, "3")
+    const num = (v: unknown): number | null => {
+      if (v === null || v === undefined || v === '') return null;
+      const n = Number(v);
+      return isNaN(n) ? null : n;
+    };
+
     // Normalize sourceDate to YYYY-MM-DD regardless of input format (e.g. "Feb 23, 2026 at 12:36 PM")
     let sourceDate = new Date().toISOString().slice(0, 10);
     if (body.sourceDate) {
@@ -52,42 +60,56 @@ export async function POST(req: Request) {
       sourceDate = isNaN(parsed.getTime()) ? sourceDate : parsed.toISOString().slice(0, 10);
     }
 
-    // Handle lbs → kg conversion
-    const weightKg = body.weightKg ?? (body.weightLbs ? Math.round((body.weightLbs / 2.20462) * 100) / 100 : undefined);
+    // Sanitize all numeric fields
+    const weightLbs = num(body.weightLbs);
+    const weightKg = num(body.weightKg) ?? (weightLbs != null ? Math.round((weightLbs / 2.20462) * 100) / 100 : null);
+    const sleepHours = num(body.sleepHours);
+    const sleepQuality = num(body.sleepQuality);
+    const restingHr = num(body.restingHr);
+    const hrv = num(body.hrv);
+    const steps = num(body.steps);
+    const energyLevel = num(body.energyLevel);
+    const sorenessLevel = num(body.sorenessLevel);
+    const stressLevel = num(body.stressLevel);
+    const mood = num(body.mood);
+    const waterOz = num(body.waterOz);
+    const nutritionRating = num(body.nutritionRating);
+    const activeKcalDay = num(body.activeKcalDay);
+    const notes = body.notes && String(body.notes).trim() !== '' ? String(body.notes) : null;
 
     // Calculate readiness from objective biometrics
     const baseReadiness = calculateReadiness({
-      sleepHours: body.sleepHours,
-      restingHr: body.restingHr,
-      hrv: body.hrv,
-      steps: body.steps,
+      sleepHours: sleepHours ?? undefined,
+      restingHr: restingHr ?? undefined,
+      hrv: hrv ?? undefined,
+      steps: steps ?? undefined,
     });
 
     // Adjust score with subjective inputs
     let adjustedScore = baseReadiness.score;
-    if (body.energyLevel != null) adjustedScore += (body.energyLevel - 3) * 4;   // -8 to +8
-    if (body.sorenessLevel != null) adjustedScore -= (body.sorenessLevel - 1) * 3; // 0 to -12
-    if (body.stressLevel != null) adjustedScore -= (body.stressLevel - 1) * 2;   // 0 to -8
+    if (energyLevel != null) adjustedScore += (energyLevel - 3) * 4;     // -8 to +8
+    if (sorenessLevel != null) adjustedScore -= (sorenessLevel - 1) * 3; // 0 to -12
+    if (stressLevel != null) adjustedScore -= (stressLevel - 1) * 2;     // 0 to -8
     adjustedScore = Math.max(0, Math.min(100, Math.round(adjustedScore)));
     const adjustedZone = adjustedScore >= 75 ? 'green' : adjustedScore >= 55 ? 'yellow' : 'red';
 
     await saveHealthDaily({
       sourceDate,
       weightKg,
-      weightLbs: body.weightLbs ?? null,
-      sleepHours: body.sleepHours,
-      sleepQuality: body.sleepQuality,
-      restingHr: body.restingHr,
-      hrv: body.hrv,
-      steps: body.steps,
-      energyLevel: body.energyLevel,
-      sorenessLevel: body.sorenessLevel,
-      stressLevel: body.stressLevel,
-      mood: body.mood,
-      waterOz: body.waterOz,
-      nutritionRating: body.nutritionRating,
-      activeKcalDay: body.activeKcalDay,
-      notes: body.notes,
+      weightLbs,
+      sleepHours,
+      sleepQuality,
+      restingHr,
+      hrv,
+      steps,
+      energyLevel,
+      sorenessLevel,
+      stressLevel,
+      mood,
+      waterOz,
+      nutritionRating,
+      activeKcalDay,
+      notes,
       readinessScore: adjustedScore,
       readinessZone: adjustedZone,
     });
