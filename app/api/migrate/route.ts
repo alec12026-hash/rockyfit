@@ -26,9 +26,9 @@ export async function GET(req: Request) {
     `CREATE TABLE IF NOT EXISTS health_daily (
       id SERIAL PRIMARY KEY,
       source_date DATE NOT NULL UNIQUE,
-      weight_kg NUMERIC(5,2),
-      weight_lbs NUMERIC(6,2),
-      sleep_hours NUMERIC(4,2),
+      weight_kg NUMERIC(7,4),
+      weight_lbs NUMERIC(8,4),
+      sleep_hours NUMERIC(8,4),
       sleep_quality INTEGER,
       resting_hr INTEGER,
       hrv NUMERIC(5,1),
@@ -55,8 +55,12 @@ export async function GET(req: Request) {
       active_kcal INTEGER,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )`,
+    // Widen columns that may have been created with too-small precision
+    `ALTER TABLE health_daily ALTER COLUMN sleep_hours TYPE NUMERIC(8,4)`,
+    `ALTER TABLE health_daily ALTER COLUMN weight_kg TYPE NUMERIC(7,4)`,
+    `ALTER TABLE health_daily ALTER COLUMN weight_lbs TYPE NUMERIC(8,4)`,
     // Add any missing columns (safe if table already had some columns)
-    `ALTER TABLE health_daily ADD COLUMN IF NOT EXISTS weight_lbs NUMERIC(6,2)`,
+    `ALTER TABLE health_daily ADD COLUMN IF NOT EXISTS weight_lbs NUMERIC(8,4)`,
     `ALTER TABLE health_daily ADD COLUMN IF NOT EXISTS sleep_quality INTEGER`,
     `ALTER TABLE health_daily ADD COLUMN IF NOT EXISTS energy_level INTEGER`,
     `ALTER TABLE health_daily ADD COLUMN IF NOT EXISTS soreness_level INTEGER`,
