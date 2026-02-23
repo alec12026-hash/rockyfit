@@ -31,38 +31,90 @@ export async function getLastLog(exerciseId: string) {
 export async function saveHealthDaily(payload: {
   sourceDate: string;
   weightKg?: number | null;
+  weightLbs?: number | null;
   sleepHours?: number | null;
+  sleepQuality?: number | null;
   restingHr?: number | null;
   hrv?: number | null;
   steps?: number | null;
+  energyLevel?: number | null;
+  sorenessLevel?: number | null;
+  stressLevel?: number | null;
+  mood?: number | null;
+  waterOz?: number | null;
+  nutritionRating?: number | null;
+  activeKcalDay?: number | null;
+  notes?: string | null;
   readinessScore?: number | null;
   readinessZone?: string | null;
 }) {
   if (!hasDb) return;
   await sql`
-    INSERT INTO health_daily (source_date, weight_kg, sleep_hours, resting_hr, hrv, steps, readiness_score, readiness_zone, updated_at)
+    INSERT INTO health_daily (
+      source_date, weight_kg, weight_lbs, sleep_hours, sleep_quality, resting_hr, hrv, steps,
+      energy_level, soreness_level, stress_level, mood, water_oz, nutrition_rating, active_kcal_day,
+      notes, readiness_score, readiness_zone, updated_at
+    )
     VALUES (
       ${payload.sourceDate},
       ${payload.weightKg ?? null},
+      ${payload.weightLbs ?? null},
       ${payload.sleepHours ?? null},
+      ${payload.sleepQuality ?? null},
       ${payload.restingHr ?? null},
       ${payload.hrv ?? null},
       ${payload.steps ?? null},
+      ${payload.energyLevel ?? null},
+      ${payload.sorenessLevel ?? null},
+      ${payload.stressLevel ?? null},
+      ${payload.mood ?? null},
+      ${payload.waterOz ?? null},
+      ${payload.nutritionRating ?? null},
+      ${payload.activeKcalDay ?? null},
+      ${payload.notes ?? null},
       ${payload.readinessScore ?? null},
       ${payload.readinessZone ?? null},
       NOW()
     )
     ON CONFLICT (source_date)
     DO UPDATE SET
-      weight_kg = EXCLUDED.weight_kg,
-      sleep_hours = EXCLUDED.sleep_hours,
-      resting_hr = EXCLUDED.resting_hr,
-      hrv = EXCLUDED.hrv,
-      steps = EXCLUDED.steps,
-      readiness_score = EXCLUDED.readiness_score,
-      readiness_zone = EXCLUDED.readiness_zone,
+      weight_kg = COALESCE(EXCLUDED.weight_kg, health_daily.weight_kg),
+      weight_lbs = COALESCE(EXCLUDED.weight_lbs, health_daily.weight_lbs),
+      sleep_hours = COALESCE(EXCLUDED.sleep_hours, health_daily.sleep_hours),
+      sleep_quality = COALESCE(EXCLUDED.sleep_quality, health_daily.sleep_quality),
+      resting_hr = COALESCE(EXCLUDED.resting_hr, health_daily.resting_hr),
+      hrv = COALESCE(EXCLUDED.hrv, health_daily.hrv),
+      steps = COALESCE(EXCLUDED.steps, health_daily.steps),
+      energy_level = COALESCE(EXCLUDED.energy_level, health_daily.energy_level),
+      soreness_level = COALESCE(EXCLUDED.soreness_level, health_daily.soreness_level),
+      stress_level = COALESCE(EXCLUDED.stress_level, health_daily.stress_level),
+      mood = COALESCE(EXCLUDED.mood, health_daily.mood),
+      water_oz = COALESCE(EXCLUDED.water_oz, health_daily.water_oz),
+      nutrition_rating = COALESCE(EXCLUDED.nutrition_rating, health_daily.nutrition_rating),
+      active_kcal_day = COALESCE(EXCLUDED.active_kcal_day, health_daily.active_kcal_day),
+      notes = COALESCE(EXCLUDED.notes, health_daily.notes),
+      readiness_score = COALESCE(EXCLUDED.readiness_score, health_daily.readiness_score),
+      readiness_zone = COALESCE(EXCLUDED.readiness_zone, health_daily.readiness_zone),
       updated_at = NOW()
   `;
+}
+
+export async function getTodayHealthLog(sourceDate: string) {
+  if (!hasDb) return null;
+  const { rows } = await sql`
+    SELECT * FROM health_daily WHERE source_date = ${sourceDate} LIMIT 1
+  `;
+  return rows[0] ?? null;
+}
+
+export async function getHealthHistory(days = 7) {
+  if (!hasDb) return [];
+  const { rows } = await sql`
+    SELECT * FROM health_daily
+    ORDER BY source_date DESC
+    LIMIT ${days}
+  `;
+  return rows;
 }
 
 export async function saveHealthWorkout(payload: {
