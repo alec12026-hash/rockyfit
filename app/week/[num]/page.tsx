@@ -4,13 +4,15 @@ import { getWeek, type WorkoutDay } from '@/lib/program';
 import { ArrowLeft, ArrowRight, Calendar, ArrowLeftRight } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 
 // DAY LABELS for UI
 const DAY_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
-export default function WeekPage({ params }: { params: { num: string } }) {
-  const weekNum = parseInt(params.num);
+export default function WeekPage({ params }: { params: Promise<{ num: string }> }) {
+  // Next.js 15+ requires unwrapping params promise
+  const resolvedParams = use(params);
+  const weekNum = parseInt(resolvedParams.num);
   
   // 1. Initial Load: Try localStorage, fallback to static default
   const defaultWeek = getWeek(weekNum);
