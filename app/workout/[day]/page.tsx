@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { getWorkoutById, WEEKS } from '@/lib/program'; 
 import { ArrowLeft, ArrowRight, Copy, Save, Repeat, Timer, Play, Pause, X } from 'lucide-react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { useParams } from 'next/navigation';
 
 // Mock alternates database
 const ALTERNATES: Record<string, string[]> = {
@@ -39,8 +39,9 @@ const REST_TIMES: Record<string, number> = {
   'donkey_calf': 60,
 };
 
-export default function WorkoutPage({ params }: { params: { day: string } }) {
-  const rawDay = decodeURIComponent(params?.day || '');
+export default function WorkoutPage() {
+  const params = useParams<{ day: string }>();
+  const rawDay = decodeURIComponent((params?.day as string) || '');
 
   // Resolve both current IDs (w1_d0_push_a) and legacy IDs (push_a)
   let workout = getWorkoutById(rawDay);
@@ -189,9 +190,9 @@ export default function WorkoutPage({ params }: { params: { day: string } }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workoutId: params.day,
-          weekNum: parseInt(params.day.split('_')[0].replace('w', '')),
-          dayNum: parseInt(params.day.split('_')[1].replace('d', '')),
+          workoutId: rawDay,
+          weekNum: parseInt(rawDay.split('_')[0]?.replace('w', '') || '1'),
+          dayNum: parseInt(rawDay.split('_')[1]?.replace('d', '') || '1'),
           sets: setsToSave,
           readinessBefore: null,
           rating: null
@@ -214,7 +215,21 @@ export default function WorkoutPage({ params }: { params: { day: string } }) {
     setSaving(false);
   };
 
-  if (!workout) return notFound();
+  if (!rawDay) {
+    return <div className="p-6 text-secondary">Loading workout…</div>;
+  }
+
+  if (!workout) {
+    return (
+      <div className="p-6 pb-24 min-h-screen bg-background">
+        <div className="bg-surface border border-zinc-200 rounded-md p-4">
+          <h1 className="font-display font-bold text-lg uppercase mb-2">Workout not found</h1>
+          <p className="text-sm text-secondary mb-4">This workout link is invalid or from an old schedule.</p>
+          <Link href="/workout" className="text-sm font-bold text-primary hover:underline">Back to Workouts</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-32">
