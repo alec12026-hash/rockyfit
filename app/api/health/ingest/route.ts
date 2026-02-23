@@ -128,6 +128,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ok: true,
       readiness: { score: adjustedScore, zone: adjustedZone },
+      received: { sourceDate, weightLbs, sleepHours, sleepQuality, restingHr, hrv, steps, energyLevel, sorenessLevel, stressLevel, mood },
     });
   } catch (err) {
     console.error('health ingest failed', err);
