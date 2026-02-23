@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { getWorkoutById } from '@/lib/program'; 
+import { getWorkoutById, WEEKS } from '@/lib/program'; 
 import { ArrowLeft, ArrowRight, Copy, Save, Repeat, Timer, Play, Pause, X } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -40,7 +40,20 @@ const REST_TIMES: Record<string, number> = {
 };
 
 export default function WorkoutPage({ params }: { params: { day: string } }) {
-  const workout = getWorkoutById(params.day);
+  const rawDay = decodeURIComponent(params?.day || '');
+
+  // Resolve both current IDs (w1_d0_push_a) and legacy IDs (push_a)
+  let workout = getWorkoutById(rawDay);
+  if (!workout && rawDay) {
+    // Legacy suffix match
+    for (const week of WEEKS) {
+      const found = week.days.find((d) => d.id.endsWith(`_${rawDay}`));
+      if (found) {
+        workout = found;
+        break;
+      }
+    }
+  }
   const [logs, setLogs] = useState<Record<string, any[]>>({});
   const [history, setHistory] = useState<Record<string, { weight: number, reps: number }>>({});
   const [progressData, setProgressData] = useState<Record<string, any[]>>({});
