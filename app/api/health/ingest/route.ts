@@ -45,7 +45,12 @@ export async function POST(req: Request) {
     }
 
     const body = (await req.json()) as IngestBody;
-    const sourceDate = body.sourceDate || new Date().toISOString().slice(0, 10);
+    // Normalize sourceDate to YYYY-MM-DD regardless of input format (e.g. "Feb 23, 2026 at 12:36 PM")
+    let sourceDate = new Date().toISOString().slice(0, 10);
+    if (body.sourceDate) {
+      const parsed = new Date(body.sourceDate);
+      sourceDate = isNaN(parsed.getTime()) ? sourceDate : parsed.toISOString().slice(0, 10);
+    }
 
     // Handle lbs → kg conversion
     const weightKg = body.weightKg ?? (body.weightLbs ? Math.round((body.weightLbs / 2.20462) * 100) / 100 : undefined);
