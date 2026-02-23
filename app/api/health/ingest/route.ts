@@ -63,7 +63,9 @@ export async function POST(req: Request) {
     // Sanitize all numeric fields
     const weightLbs = num(body.weightLbs);
     const weightKg = num(body.weightKg) ?? (weightLbs != null ? Math.round((weightLbs / 2.20462) * 100) / 100 : null);
-    const sleepHours = num(body.sleepHours);
+    // Apple Health "Calculate Sum of Sleep" returns minutes — auto-convert if value looks like minutes
+    const rawSleep = num(body.sleepHours);
+    const sleepHours = rawSleep != null && rawSleep > 24 ? Math.round((rawSleep / 60) * 100) / 100 : rawSleep;
     const sleepQuality = num(body.sleepQuality);
     const restingHr = num(body.restingHr);
     const hrv = num(body.hrv);
