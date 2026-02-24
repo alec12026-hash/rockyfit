@@ -200,12 +200,17 @@ export default function HealthPage() {
         if (notes) payload.notes = notes;
       }
 
+      console.log('Saving health data:', payload);
+
       const res = await fetch('/api/health/log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+      
+      console.log('Response status:', res.status);
       const data = await res.json();
+      console.log('Response data:', data);
 
       if (data.ok) {
         setSavedMsg(`✓ Saved! Readiness: ${data.readiness.score}/100 (${data.readiness.zone})`);
@@ -213,10 +218,11 @@ export default function HealthPage() {
         const refreshed = await fetch(`/api/health/log?date=${today}`).then((r) => r.json());
         if (refreshed.row) setTodayRow(refreshed.row);
       } else {
-        setSavedMsg('⚠️ Failed to save. Try again.');
+        setSavedMsg(data.error || '⚠️ Failed to save. Try again.');
       }
-    } catch {
-      setSavedMsg('⚠️ Network error.');
+    } catch (err: any) {
+      console.error('Save error:', err);
+      setSavedMsg(`⚠️ Error: ${err.message || 'Network error'}`);
     } finally {
       setSaving(false);
     }

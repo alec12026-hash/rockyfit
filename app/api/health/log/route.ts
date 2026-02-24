@@ -6,6 +6,14 @@ import { saveHealthDaily, getTodayHealthLog, getHealthHistory } from '@/lib/db';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    console.log('Health log POST received:', body);
+    
+    // Check DB connection
+    if (!process.env.POSTGRES_URL) {
+      console.error('POSTGRES_URL not set');
+      return NextResponse.json({ ok: false, error: 'Database not configured. Set POSTGRES_URL in Vercel.' }, { status: 500 });
+    }
+    
     const sourceDate: string = body.sourceDate || new Date().toISOString().slice(0, 10);
 
     // Convert lbs → kg if weight_lbs provided
