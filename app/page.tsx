@@ -252,7 +252,7 @@ export default function Home() {
               <div className="group bg-surface border border-zinc-200 p-5 rounded-md hover:border-primary transition-all shadow-subtle active:scale-[0.99]">
                 <div className="flex justify-between items-center">
                   <div>
-                    <span className="text-xs font-bold text-accent uppercase tracking-wider mb-1 block">Week {week.number}</span>
+                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Week {week.number}</span>
                     <h3 className="font-display font-bold text-xl uppercase text-primary group-hover:text-black">Hypertrophy Phase 2</h3>
                   </div>
                   <ArrowRight size={20} className="text-zinc-300 group-hover:text-primary transition-colors" />

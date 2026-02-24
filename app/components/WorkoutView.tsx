@@ -378,7 +378,7 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
                         </button>
                       )}
                     </div>
-                    {isSwapped && <span className="text-[10px] text-accent uppercase font-bold tracking-wider">Swapped from {ex.name}</span>}
+                    {isSwapped && <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Swapped from {ex.name}</span>}
                   </div>
                   
                   <span className="text-xs font-mono bg-zinc-100 px-2 py-1 rounded text-secondary border border-zinc-200 whitespace-nowrap ml-2">
@@ -409,7 +409,7 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
                   <div className="flex items-center gap-2 bg-accent/10 border-l-2 border-accent px-2 py-1.5 rounded-r-sm mb-2">
                     <span className="text-[10px] font-bold uppercase text-primary">Beat Last Time:</span>
                     <span className="font-mono text-xs text-primary">{prev.weight}lbs x {prev.reps}</span>
-                    <ArrowRight className="text-accent" size={12} />
+                    <ArrowRight className="text-zinc-500" size={12} />
                     <span className="font-mono text-xs font-bold text-primary">
                       Target: {target?.weight ?? '--'}x{target?.reps ?? '--'}
                     </span>
@@ -422,7 +422,7 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
                   {ex.rpe && <span>RPE: {ex.rpe}</span>}
                   <button 
                     onClick={() => startRestTimer(ex.id, REST_TIMES[ex.id] || 120)}
-                    className="flex items-center gap-1 text-accent hover:text-accent/80"
+                    className="flex items-center gap-1 text-zinc-500 hover:text-zinc-800"
                   >
                     <Timer size={12} /> Start Timer
                   </button>

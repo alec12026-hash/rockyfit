@@ -30,21 +30,38 @@ export async function GET() {
 export async function PUT(req: Request) {
   try {
     const { sessionId, sets } = await req.json();
-    
+
     if (!sessionId || !Array.isArray(sets)) {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
     }
 
     for (const s of sets) {
       if (s.id) {
+        // Update existing set
         await sql`
-          UPDATE workout_sets 
+          UPDATE workout_sets
           SET weight_lbs = ${s.weight_lbs}, reps = ${s.reps}, rpe = ${s.rpe}
           WHERE id = ${s.id} AND session_id = ${sessionId}
         `;
+      } else if (s.exercise_id && (s.weight_lbs || s.reps)) {
+        // Insert new set that wasn't logged during the workout
+        await sql`
+          INSERT INTO workout_sets (session_id, exercise_id, set_num, weight_lbs, reps, rpe, is_pr)
+          VALUES (${sessionId}, ${s.exercise_id}, ${s.set_num}, ${s.weight_lbs || null}, ${s.reps || null}, ${s.rpe || null}, false)
+        `;
       }
     }
-    
+
+    // Recalculate total volume for the session
+    const volumeResult = await sql`
+      SELECT COALESCE(SUM(weight_lbs * reps), 0) as total
+      FROM workout_sets WHERE session_id = ${sessionId}
+    `;
+    const totalVolume = volumeResult.rows[0]?.total || 0;
+    await sql`
+      UPDATE workout_sessions SET total_volume = ${totalVolume} WHERE id = ${sessionId}
+    `;
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('History update error:', error);

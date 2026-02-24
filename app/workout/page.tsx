@@ -16,7 +16,7 @@ export default function WorkoutIndexPage() {
 
       <section className="mb-6 bg-surface border border-zinc-200 rounded-md p-4 shadow-subtle">
         <div className="flex items-center gap-2 mb-2">
-          <Dumbbell size={18} className="text-accent" />
+          <Dumbbell size={18} className="text-zinc-500" />
           <h2 className="font-display font-bold uppercase">Jump back in</h2>
         </div>
         <p className="text-sm text-secondary mb-3">Start from your current program week.</p>
@@ -30,7 +30,7 @@ export default function WorkoutIndexPage() {
           <Link key={week.id} href={`/week/${week.number}`} className="block bg-white border border-zinc-200 rounded-md p-4 hover:border-primary transition-colors">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs uppercase font-bold text-accent">Week {week.number}</p>
+                <p className="text-xs uppercase font-bold text-zinc-500">Week {week.number}</p>
                 <p className="font-display font-bold uppercase text-primary">Hypertrophy Phase 2</p>
               </div>
               <ArrowRight size={18} className="text-zinc-300" />

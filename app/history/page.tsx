@@ -61,7 +61,7 @@ export default function HistoryPage() {
               <div className="bg-white border border-zinc-200 rounded-md p-4 shadow-sm active:scale-[0.98] transition-all hover:border-primary group">
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <h3 className="font-display font-bold text-base text-primary group-hover:text-accent transition-colors">
+                    <h3 className="font-display font-bold text-base text-primary group-hover:text-zinc-600 transition-colors">
                       {formatId(session.workout_id)}
                     </h3>
                     <div className="flex items-center gap-1 text-xs text-secondary mt-1">

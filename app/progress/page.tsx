@@ -13,7 +13,7 @@ export default function ProgressPage() {
 
       <section className="bg-surface border border-zinc-200 rounded-md p-5 shadow-subtle">
         <div className="flex items-center gap-2 mb-2">
-          <TrendingUp size={18} className="text-accent" />
+          <TrendingUp size={18} className="text-zinc-500" />
           <h2 className="font-display font-bold uppercase">Progress Tracking</h2>
         </div>
         <p className="text-sm text-secondary">
