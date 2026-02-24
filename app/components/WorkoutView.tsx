@@ -61,6 +61,7 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
   const [setData, setSetData] = useState<Record<string, { weight: string; reps: string; rpe: string }[]>>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Load history on mount
   useEffect(() => {
@@ -138,7 +139,12 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
 
   const handleFinishWorkout = async () => {
     setSaving(true);
-    
+    setSaveError(null);
+
+    const idMatch = dayId.match(/^w(\d+)_d(\d+)_/);
+    const weekNum = idMatch ? Number(idMatch[1]) : 1;
+    const dayNum = idMatch ? Number(idMatch[2]) : 0;
+
     const setsToSave = [];
     for (const ex of workout?.exercises || []) {
       const exSets = setData[ex.id] || [];
@@ -162,8 +168,8 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           workoutId: dayId,
-          weekNum: parseInt(dayId.split('_')[0].replace('w', '') || '1'),
-          dayNum: parseInt(dayId.split('_')[1].replace('d', '') || '1'),
+          weekNum,
+          dayNum,
           sets: setsToSave,
           readinessBefore: null,
           rating: null
@@ -171,14 +177,16 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
       });
 
       const result = await res.json();
-      if (result.success) {
+      if (res.ok && result.success) {
         setSaved(true);
+      } else {
+        setSaveError(result.error || 'Save failed.');
       }
     } catch (e) {
       console.error('Save failed:', e);
-      setSaved(true);
+      setSaveError('Network error while saving workout.');
     }
-    
+
     setSaving(false);
   };
 
@@ -364,6 +372,9 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
 
       {/* Footer */}
       <div className="fixed bottom-0 left-0 right-0 p-4 pb-20 bg-surface border-t border-zinc-200 max-w-md mx-auto">
+        {saveError && (
+          <p className="text-xs text-red-600 font-bold mb-2 text-center">{saveError}</p>
+        )}
         <button 
           onClick={handleFinishWorkout}
           disabled={saving || saved}

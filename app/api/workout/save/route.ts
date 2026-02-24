@@ -16,6 +16,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    if (!Number.isFinite(Number(weekNum)) || !Number.isFinite(Number(dayNum))) {
+      return NextResponse.json({ error: `Invalid week/day values: week=${weekNum}, day=${dayNum}` }, { status: 400 });
+    }
+
     // Calculate total volume
     const totalVolume = sets.reduce((acc: number, set: any) => {
       return acc + (set.weight_lbs || 0) * (set.reps || 0);
@@ -24,7 +28,7 @@ export async function POST(request: Request) {
     // Insert workout session
     const sessionResult = await sql`
       INSERT INTO workout_sessions (workout_id, week_num, day_num, total_volume, notes, readiness_before, rating)
-      VALUES (${workoutId}, ${weekNum}, ${dayNum}, ${totalVolume}, ${notes || null}, ${readinessBefore || null}, ${rating || null})
+      VALUES (${workoutId}, ${Number(weekNum)}, ${Number(dayNum)}, ${totalVolume}, ${notes || null}, ${readinessBefore || null}, ${rating || null})
       RETURNING id
     `;
 
