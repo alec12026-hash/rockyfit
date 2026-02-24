@@ -363,7 +363,7 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
       </div>
 
       {/* Footer */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-surface border-t border-zinc-200 max-w-md mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 p-4 pb-20 bg-surface border-t border-zinc-200 max-w-md mx-auto">
         <button 
           onClick={handleFinishWorkout}
           disabled={saving || saved}

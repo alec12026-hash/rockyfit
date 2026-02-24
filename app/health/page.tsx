@@ -225,7 +225,7 @@ export default function HealthPage() {
   const zone = zoneStyles(todayRow?.readiness_zone ?? null);
 
   return (
-    <div className="p-6 pb-28">
+    <div className="p-6 pb-32">
       {/* Header */}
       <header className="mb-6 flex items-center gap-3">
         <Link href="/" className="p-1 -ml-1 text-zinc-400 hover:text-primary">
