@@ -12,7 +12,7 @@ const config: Config = {
         background: '#F8F9FA',
         surface: '#FFFFFF',
         primary: '#18181B',
-        secondary: '#71717A',
+        secondary: '#52525B',
         accent: '#DFFF00', // Volt
         border: '#E4E4E7',
         success: '#10B981',

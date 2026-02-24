@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { WEEKS } from '@/lib/program';
-import { ArrowRight, TrendingUp, Zap, Brain, Calendar, Activity } from 'lucide-react';
+import { ArrowRight, TrendingUp, Brain, Calendar, Activity } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface CoachData {
@@ -24,13 +24,31 @@ interface ScheduleData {
 
 export default function Home() {
   const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
   const dateStr = today.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
   const [coachData, setCoachData] = useState<CoachData | null>(null);
   const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingReport, setPendingReport] = useState(false);
+  const [coachingTime, setCoachingTime] = useState('9:00 PM');
 
   useEffect(() => {
+    // Load coaching time from settings
+    const stored = localStorage.getItem('rockyfit_settings');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed.coaching_report_time) {
+          // Convert "21:00" → "9:00 PM"
+          const [h, m] = parsed.coaching_report_time.split(':').map(Number);
+          const suffix = h >= 12 ? 'PM' : 'AM';
+          const hour = h % 12 || 12;
+          setCoachingTime(`${hour}:${String(m).padStart(2, '0')} ${suffix}`);
+        }
+      } catch (_) {}
+    }
+
     // Fetch coach data
     fetch('/api/coach/daily')
       .then(res => res.json())
@@ -43,9 +61,21 @@ export default function Home() {
       .then(data => setScheduleData(data))
       .catch(console.error)
       .finally(() => setLoading(false));
+
+    // Feature 7: Check if there's a pending coaching report for today
+    fetch('/api/workout/history')
+      .then(res => res.json())
+      .then((sessions: any[]) => {
+        if (!Array.isArray(sessions)) return;
+        const hasPending = sessions.some(s => {
+          const sessionDate = s.completed_at ? s.completed_at.slice(0, 10) : '';
+          return sessionDate === todayStr && s.coaching_report_sent === false;
+        });
+        setPendingReport(hasPending);
+      })
+      .catch(console.error);
   }, []);
 
-  // Mock chart data (would come from /api/progress/chart)
   const benchTrend = [225, 230, 230, 235, 240, 245];
 
   const getZoneColor = (zone: string) => {
@@ -57,12 +87,21 @@ export default function Home() {
     }
   };
 
+  const getReadinessGradient = (zone: string) => {
+    switch (zone) {
+      case 'green': return 'bg-gradient-to-br from-green-50 to-white';
+      case 'yellow': return 'bg-gradient-to-br from-yellow-50 to-white';
+      case 'red': return 'bg-gradient-to-br from-red-50 to-white';
+      default: return 'bg-surface';
+    }
+  };
+
   const getIntensityColor = (intensity: string) => {
     switch (intensity) {
-      case 'push': return 'text-green-600 bg-green-50 border-green-200';
-      case 'reduced': return 'text-red-600 bg-red-50 border-red-200';
-      case 'moderate': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      default: return 'text-zinc-600 bg-zinc-50 border-zinc-200';
+      case 'push': return 'text-green-400 bg-green-900/30 border-green-700/50';
+      case 'reduced': return 'text-red-400 bg-red-900/30 border-red-700/50';
+      case 'moderate': return 'text-yellow-400 bg-yellow-900/30 border-yellow-700/50';
+      default: return 'text-zinc-400 bg-zinc-800 border-zinc-700';
     }
   };
 
@@ -83,17 +122,19 @@ export default function Home() {
         <div className="flex items-center gap-2 mb-3">
           <Brain size={18} className="text-accent" />
           <h2 className="font-display font-bold text-lg uppercase">Rocky's Coaching</h2>
-          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ml-auto ${getIntensityColor(coachData?.suggestedIntensity || '')}`}>
+          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ml-auto ${getIntensityColor(coachData?.suggestedIntensity || '')}`}>
             {coachData?.suggestedIntensity || 'Loading...'}
           </span>
         </div>
-        
+
         {loading ? (
           <p className="text-zinc-400 text-sm">Analyzing your data...</p>
         ) : (
           <>
-            <p className="text-sm leading-relaxed mb-3">{coachData?.coachMessage || 'Connect Apple Health to get personalized coaching.'}</p>
-            
+            <p className="text-zinc-200 text-sm leading-relaxed mb-3">
+              {coachData?.coachMessage || 'Connect Apple Health to get personalized coaching.'}
+            </p>
+
             {coachData?.suggestedChanges && coachData.suggestedChanges.length > 0 && (
               <div className="space-y-1">
                 {coachData.suggestedChanges.slice(0, 2).map((change, i) => (
@@ -112,6 +153,20 @@ export default function Home() {
         )}
       </section>
 
+      {/* Feature 7: Pending Coaching Report */}
+      {pendingReport && (
+        <section className="mb-6 border border-zinc-200 bg-zinc-50 rounded-md p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Brain size={18} className="text-primary animate-pulse" />
+            <h2 className="font-display font-bold text-base uppercase">Coaching Report</h2>
+            <span className="ml-auto text-[10px] font-bold bg-zinc-200 text-zinc-600 px-2 py-0.5 rounded uppercase">Pending</span>
+          </div>
+          <p className="text-sm text-secondary">
+            Rocky is analyzing today's session. Your coaching report will arrive on Telegram at {coachingTime}.
+          </p>
+        </section>
+      )}
+
       {/* Smart Schedule Recommendation */}
       {scheduleData && scheduleData.recommendation !== 'unknown' && (
         <section className={`mb-6 border rounded-md p-4 ${scheduleData.canTrain ? 'border-green-200 bg-green-50' : 'border-yellow-200 bg-yellow-50'}`}>
@@ -121,7 +176,7 @@ export default function Home() {
           </div>
           <p className="text-sm mb-1">{scheduleData.message}</p>
           <p className="text-xs font-bold text-secondary">{scheduleData.adjustment}</p>
-          
+
           {scheduleData.nextWorkout && (
             <Link href={`/workout/${scheduleData.nextWorkout.id}`} className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-primary hover:underline">
               <Activity size={14} /> Start {scheduleData.nextWorkout.title} →
@@ -130,18 +185,20 @@ export default function Home() {
         </section>
       )}
 
-      {/* Recovery Readiness */}
-      <section className="mb-6 bg-surface border border-zinc-200 rounded-md p-4 shadow-subtle">
+      {/* Recovery Readiness — with subtle gradient (Feature 8) */}
+      <section className={`mb-6 border border-zinc-200 rounded-md p-4 shadow-subtle ${getReadinessGradient(coachData?.readiness?.zone || '')}`}>
         <div className="flex items-center justify-between">
           <h2 className="font-display font-bold text-lg uppercase">Recovery Readiness</h2>
           <span className={`text-xs font-bold uppercase px-2 py-1 rounded-sm ${getZoneColor(coachData?.readiness?.zone || '')}`}>
             {coachData?.readiness?.zone || 'No Data'}
           </span>
         </div>
-        <p className="text-2xl font-display font-bold mt-2">{coachData?.readiness?.score ?? '--'}/100</p>
+        <p className="text-4xl font-display font-bold mt-2 tracking-tighter">
+          {coachData?.readiness?.score ?? '--'}<span className="text-xl text-secondary">/100</span>
+        </p>
         <p className="text-xs text-secondary mt-1">
-          {coachData?.readiness 
-            ? `Sleep ${coachData.readiness.sleepHours ?? '--'}h`
+          {coachData?.readiness
+            ? `Sleep ${coachData.readiness.sleepHours ?? '--'}h · HRV synced from Apple Health`
             : 'Upload Apple Health data to unlock daily recommendations.'}
         </p>
       </section>
@@ -153,32 +210,31 @@ export default function Home() {
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-display font-bold text-xl uppercase">Est. 1RM Trend</h3>
             <div className="flex gap-2">
-               <span className="text-[10px] font-bold bg-accent text-black px-2 py-1 rounded-sm uppercase">Bench</span>
-               <span className="text-[10px] font-bold bg-zinc-100 text-zinc-400 px-2 py-1 rounded-sm uppercase">Squat</span>
-               <span className="text-[10px] font-bold bg-zinc-100 text-zinc-400 px-2 py-1 rounded-sm uppercase">Deadlift</span>
+              <span className="text-[10px] font-bold bg-accent text-black px-2 py-1 rounded-sm uppercase">Bench</span>
+              <span className="text-[10px] font-bold bg-zinc-100 text-zinc-400 px-2 py-1 rounded-sm uppercase">Squat</span>
+              <span className="text-[10px] font-bold bg-zinc-100 text-zinc-400 px-2 py-1 rounded-sm uppercase">Deadlift</span>
             </div>
           </div>
-          
-          {/* Simple CSS Chart */}
+
           <div className="h-24 flex items-end gap-2 border-b border-zinc-100 pb-1">
             {benchTrend.map((val, i) => {
               const height = ((val - 200) / 60) * 100;
               return (
                 <div key={i} className="flex-1 flex flex-col items-center group relative">
-                   <span className="absolute -top-6 text-[10px] font-bold bg-primary text-white px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                     {val}
-                   </span>
-                   <div 
-                    className={`w-full rounded-t-sm transition-all duration-500 ${i === benchTrend.length - 1 ? 'bg-accent' : 'bg-zinc-200'}`} 
+                  <span className="absolute -top-6 text-[10px] font-bold bg-primary text-white px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                    {val}
+                  </span>
+                  <div
+                    className={`w-full rounded-t-sm transition-all duration-500 ${i === benchTrend.length - 1 ? 'bg-accent' : 'bg-zinc-200'}`}
                     style={{ height: `${height}%` }}
-                   ></div>
+                  ></div>
                 </div>
               );
             })}
           </div>
           <div className="flex justify-between mt-2">
-             <span className="text-[10px] font-bold text-zinc-400 uppercase">Week 1</span>
-             <span className="text-[10px] font-bold text-zinc-400 uppercase">Week 6</span>
+            <span className="text-[10px] font-bold text-zinc-400 uppercase">Week 1</span>
+            <span className="text-[10px] font-bold text-zinc-400 uppercase">Week 6</span>
           </div>
           <div className="mt-4 flex items-center gap-2 text-green-600">
             <TrendingUp size={16} />
@@ -189,7 +245,7 @@ export default function Home() {
 
       <section className="space-y-6">
         <h2 className="font-display font-semibold text-lg uppercase text-secondary border-b border-zinc-200 pb-2">Program Overview</h2>
-        
+
         <div className="space-y-4">
           {WEEKS.slice(0, 4).map((week) => (
             <Link key={week.id} href={`/week/${week.number}`}>
@@ -204,7 +260,7 @@ export default function Home() {
                 <div className="mt-3 flex gap-1">
                   {['M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
                     <div key={i} className="h-1 flex-1 bg-zinc-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-accent w-0 group-hover:w-full transition-all duration-500 delay-100" style={{ width: i < 3 ? '100%' : '0%' }}></div>
+                      <div className="h-full bg-accent transition-all duration-500 delay-100" style={{ width: i < 3 ? '100%' : '0%' }}></div>
                     </div>
                   ))}
                 </div>

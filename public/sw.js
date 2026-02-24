@@ -8,18 +8,16 @@ const STATIC_ASSETS = [
   '/icon-512.png'
 ];
 
-// Install event - cache static assets
-self.addEventListener('install', (event: ExtendableEvent) => {
+self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(STATIC_ASSETS);
     })
   );
-  (self as any).skipWaiting();
+  self.skipWaiting();
 });
 
-// Activate event - clean old caches
-self.addEventListener('activate', (event: ExtendableEvent) => {
+self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -29,34 +27,18 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
       );
     })
   );
-  (self as any).clients.claim();
+  self.clients.claim();
 });
 
-// Fetch event - network first, fallback to cache
-self.addEventListener('fetch', (event: FetchEvent) => {
+self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Skip non-GET requests
   if (event.request.method !== 'GET') return;
+  if (url.pathname.startsWith('/api/')) return; // Network only for API
 
-  // Skip API calls - always go to network
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return new Response(JSON.stringify({ error: 'Offline' }), {
-          status: 503,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      })
-    );
-    return;
-  }
-
-  // For pages - network first
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Cache successful responses
         if (response.status === 200) {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -66,7 +48,6 @@ self.addEventListener('fetch', (event: FetchEvent) => {
         return response;
       })
       .catch(() => {
-        // Fallback to cache
         return caches.match(event.request).then((response) => {
           return response || caches.match('/');
         });
@@ -74,11 +55,10 @@ self.addEventListener('fetch', (event: FetchEvent) => {
   );
 });
 
-// Push notification handler
-self.addEventListener('push', (event: PushEvent) => {
-  const data = event.data?.json() || {};
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : {};
   const title = data.title || 'RockyFit';
-  const options: NotificationOptions = {
+  const options = {
     body: data.body || 'Time to train!',
     icon: '/icon-192.png',
     badge: '/icon-96.png',
@@ -90,12 +70,28 @@ self.addEventListener('push', (event: PushEvent) => {
   );
 });
 
-// Notification click handler
-self.addEventListener('notificationclick', (event: NotificationEvent) => {
+self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    (self as any).clients.openWindow(event.notification.data)
+    self.clients.openWindow(event.notification.data)
   );
 });
 
-export {};
+// TIMER LOGIC
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'START_TIMER') {
+    const { endTime, exerciseName } = event.data;
+    const delay = endTime - Date.now();
+    if (delay > 0) {
+      setTimeout(() => {
+        self.registration.showNotification('Rest Complete! 💪', {
+          body: `Time to get back to it. Next set: ${exerciseName || 'next exercise'}`,
+          icon: '/icon-192.png',
+          badge: '/icon-96.png',
+          tag: 'rest-timer',
+          renotify: true,
+        });
+      }, delay);
+    }
+  }
+});

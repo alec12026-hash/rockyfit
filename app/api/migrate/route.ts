@@ -55,6 +55,16 @@ export async function GET(req: Request) {
       active_kcal INTEGER,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )`,
+    // Feature 1: User Settings
+    `CREATE TABLE IF NOT EXISTS user_settings (
+      id SERIAL PRIMARY KEY,
+      key VARCHAR(100) UNIQUE NOT NULL,
+      value TEXT NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    // Feature 5: Coaching Report Sent Flag
+    `ALTER TABLE workout_sessions ADD COLUMN IF NOT EXISTS coaching_report_sent BOOLEAN DEFAULT FALSE`,
+
     // Widen columns that may have been created with too-small precision
     `ALTER TABLE health_daily ALTER COLUMN sleep_hours TYPE NUMERIC(8,4)`,
     `ALTER TABLE health_daily ALTER COLUMN weight_kg TYPE NUMERIC(7,4)`,
@@ -82,6 +92,8 @@ export async function GET(req: Request) {
       await sql.query(m);
       results.push(`✓ ${label}`);
     } catch (err: unknown) {
+      // Ignore "relation does not exist" for ALTER TABLE on workout_sessions if it wasn't created yet
+      // (It is created in /api/workout/save, but we should probably handle it gracefully)
       results.push(`✗ ${label} — ${err instanceof Error ? err.message : String(err)}`);
     }
   }

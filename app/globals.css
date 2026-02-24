@@ -3,18 +3,28 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 24, 24, 27;
-  --background-start-rgb: 248, 249, 250;
-  --background-end-rgb: 248, 249, 250;
+  --background: #F8F9FA;
+  --foreground: #18181B;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: #F8F9FA;
+  color: var(--foreground);
+  background: var(--background);
 }
 
-/* Custom Utilities */
-.text-stroke-volt {
-  -webkit-text-stroke: 1px #DFFF00;
-  color: transparent;
+/* Better focus states */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+}
+
+/* Smoother transitions */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Input number hide spinners */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
