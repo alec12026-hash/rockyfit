@@ -1,11 +1,55 @@
 import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
 
+async function ensureWorkoutSchema() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS workout_sessions (
+      id SERIAL PRIMARY KEY,
+      workout_id VARCHAR(50) NOT NULL,
+      week_num INTEGER NOT NULL,
+      day_num INTEGER NOT NULL,
+      completed_at TIMESTAMP DEFAULT NOW(),
+      total_volume INTEGER DEFAULT 0,
+      notes TEXT,
+      readiness_before INTEGER,
+      rating INTEGER
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS workout_sets (
+      id SERIAL PRIMARY KEY,
+      session_id INTEGER REFERENCES workout_sessions(id),
+      exercise_id VARCHAR(50) NOT NULL,
+      set_num INTEGER NOT NULL,
+      weight_lbs INTEGER,
+      reps INTEGER,
+      rpe INTEGER,
+      is_pr BOOLEAN DEFAULT FALSE,
+      completed_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS personal_records (
+      id SERIAL PRIMARY KEY,
+      exercise_id VARCHAR(50) NOT NULL,
+      record_type VARCHAR(20) NOT NULL,
+      value INTEGER NOT NULL,
+      weight_lbs INTEGER,
+      reps INTEGER,
+      achieved_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+}
+
 // POST /api/workout/save - Save completed workout
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { workoutId, weekNum, dayNum, sets, notes, readinessBefore, rating } = body;
+
+    await ensureWorkoutSchema();
 
     if (
       !workoutId ||
@@ -73,9 +117,12 @@ export async function POST(request: Request) {
       totalVolume,
       prsAchieved: prs.length
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving workout:', error);
-    return NextResponse.json({ error: 'Failed to save workout' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Failed to save workout' },
+      { status: 500 }
+    );
   }
 }
 
