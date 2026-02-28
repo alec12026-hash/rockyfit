@@ -243,6 +243,19 @@ export default function Home() {
         </div>
       </section>
 
+      <Link href="/progress">
+        <div className="flex items-center justify-between bg-surface border border-zinc-200 rounded-md px-5 py-4 shadow-subtle hover:border-primary active:scale-[0.99] transition-all">
+          <div className="flex items-center gap-3">
+            <TrendingUp size={20} className="text-zinc-500" />
+            <div>
+              <p className="font-display font-bold uppercase text-sm text-primary">View Your Progress</p>
+              <p className="text-xs text-secondary font-body">PRs, strength trends &amp; body comp</p>
+            </div>
+          </div>
+          <ArrowRight size={18} className="text-zinc-300" />
+        </div>
+      </Link>
+
       <section className="space-y-6">
         <h2 className="font-display font-semibold text-lg uppercase text-secondary border-b border-zinc-200 pb-2">Program Overview</h2>
 
