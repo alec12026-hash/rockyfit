@@ -19,8 +19,14 @@ export default function HealthPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
+  const formatDate = (dateStr: string, isLatest: boolean) => {
+    if (isLatest) {
+      return 'Today';
+    }
+    // Add 1 day to display date (data is from previous night's sleep)
+    const date = new Date(dateStr);
+    date.setDate(date.getDate() + 1);
+    return date.toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric'
@@ -64,8 +70,9 @@ export default function HealthPage() {
             <p className="text-xs text-zinc-300">Apple Health syncs automatically via your Shortcuts setup.</p>
           </div>
         ) : (
-          logs.map((log) => {
+          logs.map((log, idx) => {
             const isExpanded = expanded === log.source_date;
+            const isLatest = idx === 0;
             return (
               <div key={log.source_date} className="bg-white border border-zinc-200 rounded-md shadow-sm overflow-hidden">
                 <div 
@@ -74,7 +81,7 @@ export default function HealthPage() {
                 >
                   <div className="flex justify-between items-center mb-3">
                     <span className="font-display font-bold text-base text-primary uppercase">
-                      {formatDate(log.source_date)}
+                      {formatDate(log.source_date, isLatest)}
                     </span>
                     <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${getZoneColor(log.readiness_zone)}`}>
                       Readiness: {log.readiness_score ?? '--'}
@@ -153,6 +160,7 @@ export default function HealthPage() {
                     </div>
 
                     <div className="space-y-2 pt-2 border-t border-zinc-200">
+                      <p className="text-[10px] font-bold text-zinc-400 uppercase">Morning Metrics</p>
                       <div className="flex items-center justify-between text-xs">
                         <span className="flex items-center gap-2 text-secondary font-bold uppercase"><Footprints size={12} /> Steps</span>
                         <span className="font-mono font-bold text-primary">{log.steps?.toLocaleString() ?? '-'}</span>
@@ -164,6 +172,42 @@ export default function HealthPage() {
                       <div className="flex items-center justify-between text-xs">
                          <span className="flex items-center gap-2 text-secondary font-bold uppercase"><Droplets size={12} /> Water</span>
                          <span className="font-mono font-bold text-primary">{log.water_oz ?? '-'} oz</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                         <span className="text-secondary font-bold uppercase">Lean BM</span>
+                         <span className="font-mono font-bold text-primary">{log.lean_bm ?? '-'} lbs</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                         <span className="text-secondary font-bold uppercase">Body Fat</span>
+                         <span className="font-mono font-bold text-primary">{log.body_fat ?? '-'}%</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                         <span className="text-secondary font-bold uppercase">BMI</span>
+                         <span className="font-mono font-bold text-primary">{log.bmi ?? '-'}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 pt-3 mt-3 border-t border-zinc-200">
+                      <p className="text-[10px] font-bold text-zinc-400 uppercase">Post-Workout Metrics</p>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-secondary font-bold uppercase">Workout Type</span>
+                        <span className="font-mono font-bold text-primary">{log.post_workout?.workout_type ?? '-'}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-secondary font-bold uppercase">Duration</span>
+                        <span className="font-mono font-bold text-primary">{log.post_workout?.duration_min ?? '-'} min</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-secondary font-bold uppercase">Avg HR</span>
+                        <span className="font-mono font-bold text-primary">{log.post_workout?.avg_hr ?? '-'} bpm</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-secondary font-bold uppercase">Max HR</span>
+                        <span className="font-mono font-bold text-primary">{log.post_workout?.max_hr ?? '-'} bpm</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-secondary font-bold uppercase">Active Calories</span>
+                        <span className="font-mono font-bold text-primary">{log.post_workout?.active_kcal ?? '-'} kcal</span>
                       </div>
                     </div>
 

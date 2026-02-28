@@ -91,8 +91,57 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
       } catch (e) { console.error('Error parsing settings', e); }
     }
 
+    // Restore timer from localStorage if exists
+    const savedEndTime = localStorage.getItem('rockyfit_timer_end');
+    const savedExercise = localStorage.getItem('rockyfit_timer_exercise');
+    if (savedEndTime && savedExercise) {
+      const endTime = parseInt(savedEndTime);
+      const remaining = Math.floor((endTime - Date.now()) / 1000);
+      if (remaining > 0) {
+        // Timer still valid - restore it
+        const targetFromStorage = parseInt(localStorage.getItem('rockyfit_timer_target') || '120');
+        setTimerTarget(targetFromStorage);
+        setTimerSeconds(targetFromStorage - remaining);
+        setCurrentTimerExercise(savedExercise);
+        setTimerActive(true);
+      } else {
+        // Timer expired - clear storage
+        localStorage.removeItem('rockyfit_timer_end');
+        localStorage.removeItem('rockyfit_timer_exercise');
+        localStorage.removeItem('rockyfit_timer_target');
+      }
+    }
+
     const fetchHistory = async () => {
       try {
+        const res = await fetch('/api/workout/history');
+        if (!res.ok) throw new Error('Failed to fetch');
+        const sessions = await res.json();
+        
+        // Find the most recent session for this dayId
+        const lastSession = sessions.find((s: any) => s.workout_id === dayId);
+        
+        if (lastSession && lastSession.sets) {
+          const historyMap: Record<string, { weight: number, reps: number }> = {};
+          
+          // Get max weight set per exercise from the last session
+          for (const set of lastSession.sets) {
+            const exId = set.exercise_id;
+            if (!historyMap[exId] || set.weight_lbs > historyMap[exId].weight) {
+              historyMap[exId] = { weight: set.weight_lbs, reps: set.reps };
+            }
+          }
+          
+          if (Object.keys(historyMap).length > 0) {
+            setHistory(historyMap);
+            return;
+          }
+        }
+        
+        // Fallback to mock if no data
+        throw new Error('No history data');
+      } catch (e) {
+        console.log('Using mock history');
         // Fallback mock data (until DB is wired)
         setHistory({
           'bench_press': { weight: 225, reps: 8 },
@@ -105,13 +154,11 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
           'sldl': { weight: 225, reps: 10 },
           'bulgarian': { weight: 60, reps: 10 },
         });
-      } catch (e) {
-        console.log('Using mock history');
       }
     };
 
     fetchHistory();
-  }, []);
+  }, [dayId]);
 
   // Timer logic
   useEffect(() => {
@@ -128,27 +175,48 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
   }, [timerActive, timerSeconds, timerTarget]);
 
   const startRestTimer = (exerciseId: string, seconds: number) => {
-    // Determine duration: use settings if default logic, or use prop if specific
-    // The prompt says "Timer duration from settings (default 2 min)"
-    // But usually different exercises have different needs. Let's use the setting as the default
-    // if we are auto-starting, but respect the exercise specific time if manually started?
-    // Prompt says: "Auto-start rest timer... Timer duration from settings".
-    // I'll use the setting for auto-start.
+    const endTime = Date.now() + (seconds * 1000);
     
+    // Determine duration: use settings if default logic, or use prop if specific
     setTimerTarget(seconds);
     setTimerSeconds(0);
     setCurrentTimerExercise(exerciseId);
     setTimerActive(true);
 
+    // Save to localStorage for persistence across app backgrounds
+    localStorage.setItem('rockyfit_timer_end', endTime.toString());
+    localStorage.setItem('rockyfit_timer_exercise', exerciseId);
+    localStorage.setItem('rockyfit_timer_target', seconds.toString());
+
     // Service Worker Message
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
       navigator.serviceWorker.controller.postMessage({
         type: 'START_TIMER',
-        endTime: Date.now() + (seconds * 1000),
+        endTime,
         exerciseName: exerciseId.replace(/_/g, ' ')
       });
     }
   };
+
+  // Clear timer from localStorage
+  const clearTimerStorage = () => {
+    localStorage.removeItem('rockyfit_timer_end');
+    localStorage.removeItem('rockyfit_timer_exercise');
+    localStorage.removeItem('rockyfit_timer_target');
+  };
+
+  // Handle timer completion
+  useEffect(() => {
+    if (timerActive && timerSeconds >= timerTarget) {
+      setTimerActive(false);
+      clearTimerStorage();
+      
+      // Notify service worker to cancel if running
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'CANCEL_TIMER' });
+      }
+    }
+  }, [timerActive, timerSeconds, timerTarget]);
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -194,19 +262,17 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
 
   const closeKeypad = () => {
     if (!keypadState) return;
-    
+
     const { exerciseId, setIdx, field, value } = keypadState;
+    const existingSet = setData[exerciseId]?.[setIdx] || { weight: '', reps: '', rpe: '' };
+    const nextSet = { ...existingSet, [field]: value };
+
     // Save the final value
     handleSetChange(exerciseId, setIdx, field, value);
 
-    // Auto-start timer logic
-    // Check if we just filled the last missing piece (weight or reps)
-    const currentSet = setData[exerciseId]?.[setIdx] || { weight: '', reps: '', rpe: '' };
-    const weight = field === 'weight' ? value : currentSet.weight;
-    const reps = field === 'reps' ? value : currentSet.reps;
-
-    if (weight && reps && !timerActive) {
-      // Auto-start timer
+    // Auto-start timer only when RPE is entered for a completed set
+    // and restart timer each set completion
+    if (field === 'rpe' && nextSet.weight && nextSet.reps && nextSet.rpe) {
       const duration = settings.rest_timer_minutes * 60;
       startRestTimer(exerciseId, duration);
     }
@@ -220,7 +286,7 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
     if (prevSet) {
       handleSetChange(exerciseId, setIdx, 'weight', prevSet.weight);
       handleSetChange(exerciseId, setIdx, 'reps', prevSet.reps);
-      // RPE is usually different, don't copy
+      handleSetChange(exerciseId, setIdx, 'rpe', prevSet.rpe);
     }
   };
 
@@ -286,46 +352,6 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
 
   return (
     <div className="pb-32 bg-background min-h-screen">
-      {/* Rest Timer Overlay */}
-      {timerActive && (
-        <div className="fixed inset-0 bg-black/80 z-40 flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-surface p-8 rounded-lg text-center max-w-sm w-full mx-4 shadow-2xl border border-zinc-800 relative">
-            <button 
-              onClick={() => { setTimerActive(false); setCurrentTimerExercise(null); }}
-              className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white"
-            >
-              <X />
-            </button>
-            
-            <h3 className="font-display font-bold text-xl uppercase text-zinc-400 mb-2">Rest Timer</h3>
-            <div className={`font-mono text-7xl font-bold mb-6 tracking-tighter ${timerSeconds >= timerTarget ? 'text-green-500' : 'text-white'}`}>
-              {formatTime(timerTarget - timerSeconds)}
-            </div>
-            
-            <div className="w-full bg-zinc-800 h-2 rounded-full overflow-hidden mb-6">
-              <div 
-                className="h-full bg-accent transition-all duration-1000 ease-linear"
-                style={{ width: `${Math.min(100, (timerSeconds / timerTarget) * 100)}%` }}
-              />
-            </div>
-            
-            <div className="flex gap-2">
-              <button 
-                onClick={() => setTimerActive(false)}
-                className="flex-1 py-3 bg-zinc-800 text-zinc-300 font-bold uppercase rounded-sm hover:bg-zinc-700 transition-colors"
-              >
-                Skip
-              </button>
-              <button 
-                onClick={() => { setTimerSeconds(0); setTimerTarget(timerTarget + 30); }}
-                className="flex-1 py-3 bg-primary text-white font-bold uppercase rounded-sm hover:bg-zinc-700 transition-colors"
-              >
-                +30s
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Keypad */}
       {keypadState && (
@@ -427,6 +453,43 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
                     <Timer size={12} /> Start Timer
                   </button>
                 </div>
+
+                {timerActive && currentTimerExercise === ex.id && (
+                  <div className="mt-2 bg-zinc-900 text-white rounded-md px-3 py-2 border border-zinc-700">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase text-zinc-400">Rest Timer</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => { setTimerActive(false); clearTimerStorage(); }}
+                          className="text-[10px] font-bold uppercase text-zinc-400 hover:text-white"
+                        >
+                          Skip
+                        </button>
+                        <button
+                          onClick={() => { setTimerSeconds(0); setTimerTarget(timerTarget + 30); }}
+                          className="text-[10px] font-bold uppercase text-accent hover:text-white"
+                        >
+                          +30s
+                        </button>
+                        <button
+                          onClick={() => { setTimerActive(false); setCurrentTimerExercise(null); clearTimerStorage(); }}
+                          className="text-zinc-500 hover:text-white"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="font-mono text-2xl font-bold mt-1">
+                      {formatTime(Math.max(0, timerTarget - timerSeconds))}
+                    </div>
+                    <div className="w-full bg-zinc-800 h-1 rounded-full overflow-hidden mt-2">
+                      <div
+                        className="h-full bg-accent transition-all duration-1000 ease-linear"
+                        style={{ width: `${timerTarget > 0 ? Math.min(100, (timerSeconds / timerTarget) * 100) : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* Input Grid */}
@@ -489,7 +552,7 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
       </div>
 
       {/* Footer */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 pb-20 bg-surface border-t border-zinc-200 max-w-md mx-auto z-30">
+      <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 p-4 bg-surface border-t border-zinc-200 max-w-md mx-auto z-40">
         {saveError && (
           <p className="text-xs text-red-600 font-bold mb-2 text-center">{saveError}</p>
         )}

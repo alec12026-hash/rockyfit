@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { calculateReadiness } from '@/lib/readiness';
-import { saveHealthDaily, getTodayHealthLog, getHealthHistory } from '@/lib/db';
+import { saveHealthDaily, getTodayHealthLog, getHealthHistory, getHealthWorkoutHistory } from '@/lib/db';
 
 // POST /api/health/log - Manual check-in from the app UI (no auth required, same-origin)
 export async function POST(req: Request) {
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     const weightLbs = body.weightLbs != null ? Number(body.weightLbs) : null;
     const weightKg = weightLbs != null ? Math.round((weightLbs / 2.20462) * 100) / 100 : null;
 
-    // Build readiness from whatever objective biometrics are provided
+    // Readiness is objective-only (no manual prompt adjustments)
     const readiness = calculateReadiness({
       sleepHours: body.sleepHours != null ? Number(body.sleepHours) : undefined,
       restingHr: body.restingHr != null ? Number(body.restingHr) : undefined,
@@ -28,22 +28,8 @@ export async function POST(req: Request) {
       steps: body.steps != null ? Number(body.steps) : undefined,
     });
 
-    // Boost/penalise readiness with subjective inputs
-    let adjustedScore = readiness.score;
-    if (body.energyLevel != null) {
-      const e = Number(body.energyLevel); // 1–5
-      adjustedScore += (e - 3) * 4; // -8 to +8
-    }
-    if (body.sorenessLevel != null) {
-      const s = Number(body.sorenessLevel); // 1=no soreness, 5=very sore
-      adjustedScore -= (s - 1) * 3; // 0 to -12
-    }
-    if (body.stressLevel != null) {
-      const st = Number(body.stressLevel); // 1=no stress, 5=very stressed
-      adjustedScore -= (st - 1) * 2; // 0 to -8
-    }
-    adjustedScore = Math.max(0, Math.min(100, Math.round(adjustedScore)));
-    const adjustedZone = adjustedScore >= 75 ? 'green' : adjustedScore >= 55 ? 'yellow' : 'red';
+    const adjustedScore = readiness.score;
+    const adjustedZone = readiness.zone;
 
     await saveHealthDaily({
       sourceDate,
@@ -61,6 +47,9 @@ export async function POST(req: Request) {
       waterOz: body.waterOz != null ? Number(body.waterOz) : null,
       nutritionRating: body.nutritionRating != null ? Number(body.nutritionRating) : null,
       activeKcalDay: body.activeKcalDay != null ? Number(body.activeKcalDay) : null,
+      leanBm: body.leanBM != null ? Number(body.leanBM) : null,
+      bodyFat: body.bodyFat != null ? Number(body.bodyFat) : null,
+      bmi: body.BMI != null ? Number(body.BMI) : null,
       notes: body.notes || null,
       readinessScore: adjustedScore,
       readinessZone: adjustedZone,
@@ -84,8 +73,27 @@ export async function GET(req: Request) {
     const history = url.searchParams.get('history');
 
     if (history) {
-      const rows = await getHealthHistory(Number(history) || 7);
-      return NextResponse.json({ rows });
+      const days = Number(history) || 7;
+      const [rows, workouts] = await Promise.all([
+        getHealthHistory(days),
+        getHealthWorkoutHistory(days),
+      ]);
+
+      const latestWorkoutByDate = new Map<string, any>();
+      for (const w of workouts) {
+        const key = String(w.source_date).slice(0, 10);
+        if (!latestWorkoutByDate.has(key)) latestWorkoutByDate.set(key, w);
+      }
+
+      const merged = rows.map((r: any) => {
+        const key = String(r.source_date).slice(0, 10);
+        return {
+          ...r,
+          post_workout: latestWorkoutByDate.get(key) || null,
+        };
+      });
+
+      return NextResponse.json({ rows: merged });
     }
 
     const row = await getTodayHealthLog(date);

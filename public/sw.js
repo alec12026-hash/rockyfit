@@ -78,20 +78,36 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // TIMER LOGIC
+let activeTimerId = null;
+
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'START_TIMER') {
     const { endTime, exerciseName } = event.data;
+    
+    // Cancel any existing timer first
+    if (activeTimerId !== null) {
+      clearTimeout(activeTimerId);
+      activeTimerId = null;
+    }
+    
     const delay = endTime - Date.now();
     if (delay > 0) {
-      setTimeout(() => {
-        self.registration.showNotification('Rest Complete! 💪', {
-          body: `Time to get back to it. Next set: ${exerciseName || 'next exercise'}`,
+      activeTimerId = setTimeout(() => {
+        self.registration.showNotification('Rest complete! Time to lift 💪', {
+          body: exerciseName ? `${exerciseName}` : 'Time for your next set!',
           icon: '/icon-192.png',
           badge: '/icon-96.png',
           tag: 'rest-timer',
           renotify: true,
         });
+        activeTimerId = null;
       }, delay);
+    }
+  } else if (event.data && event.data.type === 'CANCEL_TIMER') {
+    // Cancel the pending timer notification
+    if (activeTimerId !== null) {
+      clearTimeout(activeTimerId);
+      activeTimerId = null;
     }
   }
 });

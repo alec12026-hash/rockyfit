@@ -44,6 +44,9 @@ export async function saveHealthDaily(payload: {
   waterOz?: number | null;
   nutritionRating?: number | null;
   activeKcalDay?: number | null;
+  leanBm?: number | null;
+  bodyFat?: number | null;
+  bmi?: number | null;
   notes?: string | null;
   readinessScore?: number | null;
   readinessZone?: string | null;
@@ -53,7 +56,7 @@ export async function saveHealthDaily(payload: {
     INSERT INTO health_daily (
       source_date, weight_kg, weight_lbs, sleep_hours, sleep_quality, resting_hr, hrv, steps,
       energy_level, soreness_level, stress_level, mood, water_oz, nutrition_rating, active_kcal_day,
-      notes, readiness_score, readiness_zone, updated_at
+      lean_bm, body_fat, bmi, notes, readiness_score, readiness_zone, updated_at
     )
     VALUES (
       ${payload.sourceDate},
@@ -71,6 +74,9 @@ export async function saveHealthDaily(payload: {
       ${payload.waterOz ?? null},
       ${payload.nutritionRating ?? null},
       ${payload.activeKcalDay ?? null},
+      ${payload.leanBm ?? null},
+      ${payload.bodyFat ?? null},
+      ${payload.bmi ?? null},
       ${payload.notes ?? null},
       ${payload.readinessScore ?? null},
       ${payload.readinessZone ?? null},
@@ -92,6 +98,9 @@ export async function saveHealthDaily(payload: {
       water_oz = COALESCE(EXCLUDED.water_oz, health_daily.water_oz),
       nutrition_rating = COALESCE(EXCLUDED.nutrition_rating, health_daily.nutrition_rating),
       active_kcal_day = COALESCE(EXCLUDED.active_kcal_day, health_daily.active_kcal_day),
+      lean_bm = COALESCE(EXCLUDED.lean_bm, health_daily.lean_bm),
+      body_fat = COALESCE(EXCLUDED.body_fat, health_daily.body_fat),
+      bmi = COALESCE(EXCLUDED.bmi, health_daily.bmi),
       notes = COALESCE(EXCLUDED.notes, health_daily.notes),
       readiness_score = COALESCE(EXCLUDED.readiness_score, health_daily.readiness_score),
       readiness_zone = COALESCE(EXCLUDED.readiness_zone, health_daily.readiness_zone),
@@ -113,6 +122,17 @@ export async function getHealthHistory(days = 7) {
     SELECT * FROM health_daily
     ORDER BY source_date DESC
     LIMIT ${days}
+  `;
+  return rows;
+}
+
+export async function getHealthWorkoutHistory(days = 7) {
+  if (!hasDb) return [];
+  const { rows } = await sql`
+    SELECT source_date, workout_type, duration_min, avg_hr, max_hr, active_kcal, created_at
+    FROM health_workouts
+    ORDER BY source_date DESC, created_at DESC
+    LIMIT ${Math.max(days * 4, 20)}
   `;
   return rows;
 }

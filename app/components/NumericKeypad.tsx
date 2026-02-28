@@ -23,12 +23,12 @@ export default function NumericKeypad({ value, onChange, onClose, label }: Numer
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+    <div className="fixed inset-0 z-[70] flex flex-col justify-end">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       
       {/* Keypad Sheet */}
-      <div className="relative bg-surface rounded-t-xl p-4 shadow-2xl animate-in slide-in-from-bottom duration-300">
+      <div className="relative bg-surface rounded-t-xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom)+4rem)] shadow-2xl animate-in slide-in-from-bottom duration-300">
         <div className="flex justify-between items-center mb-4">
           <span className="text-xs font-bold text-secondary uppercase tracking-wider">{label}</span>
           <button onClick={onClose} className="p-2 -mr-2 text-zinc-400 hover:text-primary">

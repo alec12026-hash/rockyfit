@@ -21,6 +21,9 @@ type IngestBody = {
   waterOz?: number;
   nutritionRating?: number;
   notes?: string;
+  leanBM?: number;
+  bodyFat?: number;
+  BMI?: number;
   // Workout data (post-workout shortcut)
   workout?: {
     workoutType?: string;
@@ -29,6 +32,12 @@ type IngestBody = {
     maxHr?: number;
     activeKcal?: number;
   };
+  // Flat aliases supported from Shortcuts JSON body
+  workoutType?: string;
+  durationMin?: number;
+  avgHR?: number;
+  maxHR?: number;
+  activeCalories?: number;
 };
 
 export async function POST(req: Request) {
@@ -84,60 +93,84 @@ export async function POST(req: Request) {
     const waterOz = num(body.waterOz);
     const nutritionRating = num(body.nutritionRating);
     const activeKcalDay = num(body.activeKcalDay);
+    const leanBm = num(body.leanBM);
+    const bodyFat = num(body.bodyFat);
+    const bmi = num(body.BMI);
     const notes = body.notes && String(body.notes).trim() !== '' ? String(body.notes) : null;
 
-    // Calculate readiness from objective biometrics
-    const baseReadiness = calculateReadiness({
-      sleepHours: sleepHours ?? undefined,
-      restingHr: restingHr ?? undefined,
-      hrv: hrv ?? undefined,
-      steps: steps ?? undefined,
-    });
+    // Workout payload can be nested or flat (Shortcuts-friendly)
+    const workoutType = body.workout?.workoutType ?? (body.workoutType ? String(body.workoutType) : null);
+    const durationMin = num(body.workout?.durationMin ?? body.durationMin);
+    const avgHr = num(body.workout?.avgHr ?? body.avgHR);
+    const maxHr = num(body.workout?.maxHr ?? body.maxHR);
+    const activeKcal = num(body.workout?.activeKcal ?? body.activeCalories);
 
-    // Adjust score with subjective inputs
-    let adjustedScore = baseReadiness.score;
-    if (energyLevel != null) adjustedScore += (energyLevel - 3) * 4;     // -8 to +8
-    if (sorenessLevel != null) adjustedScore -= (sorenessLevel - 1) * 3; // 0 to -12
-    if (stressLevel != null) adjustedScore -= (stressLevel - 1) * 2;     // 0 to -8
-    adjustedScore = Math.max(0, Math.min(100, Math.round(adjustedScore)));
-    const adjustedZone = adjustedScore >= 75 ? 'green' : adjustedScore >= 55 ? 'yellow' : 'red';
+    const hasMorningMetrics = [
+      weightKg, weightLbs, sleepHours, sleepQuality, restingHr, hrv, steps,
+      energyLevel, sorenessLevel, stressLevel, mood, waterOz, nutritionRating,
+      activeKcalDay, leanBm, bodyFat, bmi, notes
+    ].some(v => v !== null && v !== undefined);
 
-    await saveHealthDaily({
-      sourceDate,
-      weightKg,
-      weightLbs,
-      sleepHours,
-      sleepQuality,
-      restingHr,
-      hrv,
-      steps,
-      energyLevel,
-      sorenessLevel,
-      stressLevel,
-      mood,
-      waterOz,
-      nutritionRating,
-      activeKcalDay,
-      notes,
-      readinessScore: adjustedScore,
-      readinessZone: adjustedZone,
-    });
+    let adjustedScore: number | null = null;
+    let adjustedZone: string | null = null;
 
-    if (body.workout) {
+    if (hasMorningMetrics) {
+      // Readiness is objective-only and only computed from morning metrics
+      const baseReadiness = calculateReadiness({
+        sleepHours: sleepHours ?? undefined,
+        restingHr: restingHr ?? undefined,
+        hrv: hrv ?? undefined,
+        steps: steps ?? undefined,
+      });
+
+      adjustedScore = baseReadiness.score;
+      adjustedZone = baseReadiness.zone;
+
+      await saveHealthDaily({
+        sourceDate,
+        weightKg,
+        weightLbs,
+        sleepHours,
+        sleepQuality,
+        restingHr,
+        hrv,
+        steps,
+        energyLevel,
+        sorenessLevel,
+        stressLevel,
+        mood,
+        waterOz,
+        nutritionRating,
+        activeKcalDay,
+        leanBm,
+        bodyFat,
+        bmi,
+        notes,
+        readinessScore: adjustedScore,
+        readinessZone: adjustedZone,
+      });
+    }
+
+    const hasWorkoutMetrics = [workoutType, durationMin, avgHr, maxHr, activeKcal].some(v => v !== null && v !== undefined);
+    if (hasWorkoutMetrics) {
       await saveHealthWorkout({
         sourceDate,
-        workoutType: body.workout.workoutType,
-        durationMin: body.workout.durationMin,
-        avgHr: body.workout.avgHr,
-        maxHr: body.workout.maxHr,
-        activeKcal: body.workout.activeKcal,
+        workoutType: workoutType ?? undefined,
+        durationMin: durationMin ?? undefined,
+        avgHr: avgHr ?? undefined,
+        maxHr: maxHr ?? undefined,
+        activeKcal: activeKcal ?? undefined,
       });
     }
 
     return NextResponse.json({
       ok: true,
-      readiness: { score: adjustedScore, zone: adjustedZone },
-      received: { sourceDate, weightLbs, sleepHours, sleepQuality, restingHr, hrv, steps, energyLevel, sorenessLevel, stressLevel, mood },
+      readiness: adjustedScore != null && adjustedZone != null ? { score: adjustedScore, zone: adjustedZone } : null,
+      received: {
+        sourceDate,
+        morning: { weightLbs, sleepHours, sleepQuality, restingHr, hrv, steps, energyLevel, sorenessLevel, stressLevel, mood, leanBm, bodyFat, bmi },
+        workout: { workoutType, durationMin, avgHr, maxHr, activeKcal },
+      },
     });
   } catch (err) {
     console.error('health ingest failed', err);
