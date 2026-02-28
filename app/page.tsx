@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { WEEKS } from '@/lib/program';
-import { ArrowRight, TrendingUp, Brain, Calendar, Activity } from 'lucide-react';
+import { ArrowRight, TrendingUp, TrendingDown, Brain, Calendar, Activity } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface CoachData {
@@ -76,7 +76,25 @@ export default function Home() {
       .catch(console.error);
   }, []);
 
-  const benchTrend = [225, 230, 230, 235, 240, 245];
+  const [activeLift, setActiveLift] = useState<'bench_press' | 'squat' | 'deadlift'>('bench_press');
+  const [liftChartData, setLiftChartData] = useState<{ week: number; weight: number }[]>([]);
+  const [liftLoading, setLiftLoading] = useState(true);
+
+  useEffect(() => {
+    setLiftLoading(true);
+    fetch(`/api/progress/chart?exerciseId=${activeLift}&type=1rm`)
+      .then(r => r.json())
+      .then(d => {
+        const raw = (d.data || []).slice(-8);
+        const mapped = raw.map((pt: any, i: number) => ({
+          week: i + 1,
+          weight: pt.max_weight || Math.round(pt.estimated_1rm || 0),
+        }));
+        setLiftChartData(mapped);
+      })
+      .catch(() => setLiftChartData([]))
+      .finally(() => setLiftLoading(false));
+  }, [activeLift]);
 
   const getZoneColor = (zone: string) => {
     switch (zone) {
@@ -203,58 +221,112 @@ export default function Home() {
         </p>
       </section>
 
-      {/* Analytics Dashboard */}
+      {/* Performance Card with SVG Line Chart */}
       <section className="mb-8">
-        <h2 className="font-display font-semibold text-lg uppercase text-secondary border-b border-zinc-200 pb-2 mb-4">Performance</h2>
         <div className="bg-surface border border-zinc-200 p-4 rounded-md shadow-subtle">
+          {/* Header */}
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-display font-bold text-xl uppercase">Est. 1RM Trend</h3>
             <div className="flex gap-2">
-              <span className="text-[10px] font-bold bg-accent text-black px-2 py-1 rounded-sm uppercase">Bench</span>
-              <span className="text-[10px] font-bold bg-zinc-100 text-zinc-400 px-2 py-1 rounded-sm uppercase">Squat</span>
-              <span className="text-[10px] font-bold bg-zinc-100 text-zinc-400 px-2 py-1 rounded-sm uppercase">Deadlift</span>
+              {(['bench_press', 'squat', 'deadlift'] as const).map((lift) => (
+                <button
+                  key={lift}
+                  onClick={() => setActiveLift(lift)}
+                  className={`text-[10px] font-bold px-2 py-1 rounded-sm uppercase transition-colors ${
+                    activeLift === lift ? 'bg-accent text-black' : 'bg-zinc-100 text-zinc-400'
+                  }`}
+                >
+                  {lift.replace('_', ' ')}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="h-24 flex items-end gap-2 border-b border-zinc-100 pb-1">
-            {benchTrend.map((val, i) => {
-              const height = ((val - 200) / 60) * 100;
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center group relative">
-                  <span className="absolute -top-6 text-[10px] font-bold bg-primary text-white px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                    {val}
-                  </span>
-                  <div
-                    className={`w-full rounded-t-sm transition-all duration-500 ${i === benchTrend.length - 1 ? 'bg-accent' : 'bg-zinc-200'}`}
-                    style={{ height: `${height}%` }}
-                  ></div>
+          {/* Chart Area */}
+          <div className="h-[120px] border-b border-zinc-100 pb-1">
+            {liftLoading ? (
+              <div className="h-full flex flex-col justify-end gap-1">
+                <div className="h-8 bg-zinc-100 animate-pulse rounded-sm"></div>
+                <div className="h-12 bg-zinc-100 animate-pulse rounded-sm"></div>
+                <div className="h-6 bg-zinc-100 animate-pulse rounded-sm"></div>
+              </div>
+            ) : liftChartData.length === 0 ? (
+              <div className="h-full flex items-center justify-center">
+                <p className="text-xs text-zinc-400 text-center">No data yet — complete a workout to start tracking</p>
+              </div>
+            ) : (
+              (() => {
+                const CHART_W = 300;
+                const CHART_H = 100;
+                const PAD = { top: 20, right: 10, bottom: 20, left: 10 };
+                const plotW = CHART_W - PAD.left - PAD.right;
+                const plotH = CHART_H - PAD.top - PAD.bottom;
+                const weeks = [1, 2, 3, 4, 5, 6, 7, 8];
+                const weights = liftChartData.map(d => d.weight).filter(Boolean);
+                const minW = weights.length ? Math.min(...weights) * 0.98 : 0;
+                const maxW = weights.length ? Math.max(...weights) * 1.02 : 300;
+                const xPos = (week: number) => PAD.left + ((week - 1) / 7) * plotW;
+                const yPos = (w: number) => PAD.top + plotH - ((w - minW) / (maxW - minW || 1)) * plotH;
+                const points = liftChartData.map(d => `${xPos(d.week)},${yPos(d.weight)}`).join(' ');
+
+                return (
+                  <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} width="100%" className="overflow-visible">
+                    {weeks.map(w => (
+                      <text key={w} x={xPos(w)} y={CHART_H} textAnchor="middle" fontSize="8" fill="#a1a1aa" fontFamily="inherit">
+                        W{w}
+                      </text>
+                    ))}
+                    {liftChartData.length > 1 && (
+                      <polyline points={points} fill="none" stroke="#DFFF00" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+                    )}
+                    {liftChartData.map(d => (
+                      <g key={d.week}>
+                        <circle cx={xPos(d.week)} cy={yPos(d.weight)} r="3" fill="#DFFF00" />
+                        <text x={xPos(d.week)} y={yPos(d.weight) - 7} textAnchor="middle" fontSize="8" fontWeight="bold" fill="#111" fontFamily="inherit">
+                          {d.weight}
+                        </text>
+                      </g>
+                    ))}
+                  </svg>
+                );
+              })()
+            )}
+          </div>
+
+          {/* Strength Delta */}
+          {liftChartData.length > 1 && (() => {
+            const first = liftChartData[0].weight;
+            const last = liftChartData[liftChartData.length - 1].weight;
+            const delta = ((last - first) / first * 100).toFixed(1);
+            const isPositive = Number(delta) > 0;
+
+            return (
+              <div className={`mt-4 flex items-center gap-2 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                {isPositive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                <span className="text-xs font-bold uppercase">
+                  {isPositive ? '+' : ''}{delta}% {isPositive ? 'Strength Increase' : 'Decrease'}
+                </span>
+              </div>
+            );
+          })()}
+
+          {/* View Your Progress - inside same card */}
+          <div className="border-t border-zinc-100 mt-4 pt-4">
+            <Link href="/progress">
+              <div className="flex items-center justify-between hover:border-primary active:scale-[0.99] transition-all -mx-1 px-1 -my-2 py-2 rounded-sm">
+                <div className="flex items-center gap-3">
+                  <TrendingUp size={20} className="text-zinc-500" />
+                  <div>
+                    <p className="font-display font-bold uppercase text-sm text-primary">View Your Progress</p>
+                    <p className="text-xs text-secondary font-body">PRs, strength trends &amp; body comp</p>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-          <div className="flex justify-between mt-2">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase">Week 1</span>
-            <span className="text-[10px] font-bold text-zinc-400 uppercase">Week 6</span>
-          </div>
-          <div className="mt-4 flex items-center gap-2 text-green-600">
-            <TrendingUp size={16} />
-            <span className="text-xs font-bold uppercase">+8.8% Strength Increase</span>
+                <ArrowRight size={18} className="text-zinc-300" />
+              </div>
+            </Link>
           </div>
         </div>
       </section>
-
-      <Link href="/progress">
-        <div className="flex items-center justify-between bg-surface border border-zinc-200 rounded-md px-5 py-4 shadow-subtle hover:border-primary active:scale-[0.99] transition-all">
-          <div className="flex items-center gap-3">
-            <TrendingUp size={20} className="text-zinc-500" />
-            <div>
-              <p className="font-display font-bold uppercase text-sm text-primary">View Your Progress</p>
-              <p className="text-xs text-secondary font-body">PRs, strength trends &amp; body comp</p>
-            </div>
-          </div>
-          <ArrowRight size={18} className="text-zinc-300" />
-        </div>
-      </Link>
 
       <section className="space-y-6">
         <h2 className="font-display font-semibold text-lg uppercase text-secondary border-b border-zinc-200 pb-2">Program Overview</h2>
