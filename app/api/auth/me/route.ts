@@ -5,6 +5,10 @@ export async function GET(req: NextRequest) {
   try {
     const cookieUserId = req.cookies.get('rockyfit_user')?.value;
     const headerUserId = req.headers.get('x-user-id');
+    const hasSessionCookie = Boolean(cookieUserId);
+
+    // Backward compatibility: Alec can still use the app without an auth cookie.
+    // But we mark it as legacyAuto so login/signup pages can remain accessible.
     const resolvedUserId = parseInt(headerUserId || cookieUserId || '1', 10);
 
     if (isNaN(resolvedUserId) || resolvedUserId < 1) {
@@ -26,8 +30,12 @@ export async function GET(req: NextRequest) {
 
     const user = result.rows[0];
     
+    const legacyAuto = !hasSessionCookie && resolvedUserId === 1;
+
     return NextResponse.json({ 
       authenticated: true,
+      legacyAuto,
+      hasSessionCookie,
       user: {
         id: user.id,
         email: user.email,

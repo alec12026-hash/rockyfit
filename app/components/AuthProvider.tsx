@@ -30,6 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [legacyAuto, setLegacyAuto] = useState(false);
 
   const refresh = async () => {
     try {
@@ -37,8 +38,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       if (data.authenticated) {
         setUser(data.user);
+        setLegacyAuto(Boolean(data.legacyAuto));
       } else {
         setUser(null);
+        setLegacyAuto(false);
       }
     } catch (error) {
       console.error('Auth check failed:', error);
@@ -69,10 +72,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Not logged in, redirect to login
       router.push('/login');
     } else if (user && (pathname === '/login' || pathname === '/signup')) {
-      // Already logged in, redirect to home
-      router.push('/');
+      // If this is a legacy auto-session (no cookie, Alec compatibility),
+      // allow staying on auth pages so family can still sign up/login.
+      if (!legacyAuto) {
+        router.push('/');
+      }
     }
-  }, [user, loading, pathname, router]);
+  }, [user, legacyAuto, loading, pathname, router]);
 
   return (
     <AuthContext.Provider value={{ user, loading, refresh, logout }}>
