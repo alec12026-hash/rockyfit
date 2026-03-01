@@ -123,28 +123,23 @@ function generateFallbackProgram(profile: any): any {
 }
 
 async function getMinimaxKey(): Promise<string> {
+  // On Vercel: use env var (local auth file not available in serverless)
+  if (process.env.MINIMAX_API_KEY) return process.env.MINIMAX_API_KEY;
+
+  // Local dev fallback: read from auth-profiles.json
   try {
     const fs = require('fs');
-    const path = require('path');
-    
-    const authPath = path.join(process.env.HOME || '', '.openclaw/agents/main/agent/auth-profiles.json');
+    const authPath = `${process.env.HOME}/.openclaw/agents/main/agent/auth-profiles.json`;
     if (fs.existsSync(authPath)) {
       const auth = JSON.parse(fs.readFileSync(authPath, 'utf8'));
       const key = auth?.profiles?.['minimax:default']?.key;
       if (key) return key;
     }
-    
-    const authJsonPath = path.join(process.env.HOME || '', '.openclaw/agents/main/agent/auth.json');
-    if (fs.existsSync(authJsonPath)) {
-      const auth = JSON.parse(fs.readFileSync(authJsonPath, 'utf8'));
-      const key = auth?.minimax?.key;
-      if (key) return key;
-    }
   } catch (e) {
-    console.error('Error reading auth files:', e);
+    console.error('Error reading local auth file:', e);
   }
-  
-  return process.env.MINIMAX_API_KEY || '';
+
+  return '';
 }
 
 async function callMinimax(prompt: string): Promise<string | null> {
