@@ -219,6 +219,9 @@ export default function Onboarding() {
           throw new Error(saveData.error || 'Failed to save onboarding');
         }
 
+        // Send welcome email (non-blocking, don't wait)
+        fetch('/api/email/welcome', { method: 'POST' }).catch(console.error);
+
         // Then generate the program
         const programRes = await fetch('/api/program/new', {
           method: 'POST',
