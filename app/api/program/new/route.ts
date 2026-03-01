@@ -181,8 +181,10 @@ async function callMinimax(prompt: string): Promise<string | null> {
 
     const data = await response.json();
     let content = data.choices?.[0]?.message?.content || '';
-    content = content.replace(/<[^>]*>?/gm, '').trim();
-    
+    // Strip <think>...</think> blocks (MiniMax-M2.5 chain-of-thought)
+    content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    // Strip any remaining HTML/XML tags
+    content = content.replace(/<[^>]+>/g, '').trim();
     return content;
   } catch (error) {
     console.error('Minimax API error:', error);
@@ -254,10 +256,15 @@ export async function POST(req: NextRequest) {
     
     if (aiResponse) {
       try {
-        const cleaned = aiResponse.replace(/```json|```/g, '').trim();
+        // Strip markdown code fences
+        let cleaned = aiResponse.replace(/```json|```/gi, '').trim();
+        // Extract JSON object if surrounded by other text
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (jsonMatch) cleaned = jsonMatch[0];
         programData = JSON.parse(cleaned);
       } catch (parseError) {
         console.error('Failed to parse AI response:', parseError);
+        console.error('Raw response (first 500):', aiResponse?.slice(0, 500));
       }
     }
 
