@@ -27,15 +27,15 @@ export async function POST(req: NextRequest) {
     await sql`
       UPDATE user_profiles SET
         experience_level = ${answers.experience_level || null},
-        workout_frequency = ${parseInt(answers.workout_frequency) || null},
+        workout_frequency = ${answers.workout_frequency ? parseInt(answers.workout_frequency) : null},
         goal = ${answers.goal || null},
         equipment = ${answers.equipment || null},
         injuries = ${answers.injuries || null},
         age = ${answers.age ? parseInt(answers.age) : null},
-        biological_sex = ${answers.biological_sex || null},
-        body_weight = ${answers.body_weight ? parseInt(answers.body_weight) : null},
-        primary_focus = ${answers.primary_focus || null},
-        session_duration = ${answers.session_duration ? parseInt(answers.session_duration) : null},
+        sex = ${answers.biological_sex || null},
+        body_weight_lbs = ${answers.body_weight ? parseFloat(answers.body_weight) : null},
+        priority_muscle = ${answers.primary_focus || null},
+        session_duration = ${answers.session_duration || null},
         sleep_quality = ${answers.sleep_quality || null},
         stress_level = ${answers.stress_level || null},
         onboarding_complete = TRUE

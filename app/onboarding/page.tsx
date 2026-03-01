@@ -77,14 +77,16 @@ const questions = [
   },
   {
     key: 'primary_focus',
-    question: "Which body part or area do you want to prioritize?",
-    type: 'select',
+    question: "Which body parts do you want to prioritize?",
+    type: 'multiselect',
     options: [
       { value: 'chest', label: 'Chest' },
       { value: 'back', label: 'Back' },
       { value: 'legs', label: 'Legs' },
       { value: 'arms', label: 'Arms (Biceps/Triceps)' },
       { value: 'shoulders', label: 'Shoulders' },
+      { value: 'core', label: 'Core' },
+      { value: 'glutes', label: 'Glutes' },
       { value: 'overall', label: 'Overall Balanced' },
     ]
   },
@@ -157,6 +159,7 @@ export default function Onboarding() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [multiSelections, setMultiSelections] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
@@ -174,6 +177,18 @@ export default function Onboarding() {
     }, 2000);
     return () => clearInterval(interval);
   }, [generating]);
+
+  const handleMultiNext = async () => {
+    const value = multiSelections.join(',');
+    setMultiSelections([]);
+    await handleAnswer(value);
+  };
+
+  const toggleMultiSelection = (value: string) => {
+    setMultiSelections(prev =>
+      prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
+    );
+  };
 
   const handleAnswer = async (value: string) => {
     const newAnswers = { ...answers, [currentQ.key]: value };
@@ -348,7 +363,40 @@ export default function Onboarding() {
             </div>
           )}
 
-          {currentQ.type === 'select' ? (
+          {currentQ.type === 'multiselect' ? (
+            <div>
+              <div className="space-y-3">
+                {currentQ.options?.map((opt: any) => {
+                  const selected = multiSelections.includes(opt.value);
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => toggleMultiSelection(opt.value)}
+                      className={`w-full text-left p-4 border rounded-sm transition-colors font-body ${
+                        selected
+                          ? 'bg-primary text-white border-primary'
+                          : 'bg-background text-primary border-border hover:border-primary'
+                      }`}
+                    >
+                      <span className="flex items-center gap-3">
+                        <span className={`w-5 h-5 border-2 rounded-sm flex items-center justify-center flex-shrink-0 ${selected ? 'border-white bg-white' : 'border-zinc-400'}`}>
+                          {selected && <span className="text-primary text-xs font-bold">✓</span>}
+                        </span>
+                        {opt.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={handleMultiNext}
+                disabled={multiSelections.length === 0}
+                className="w-full mt-4 py-3 bg-primary text-white font-display font-semibold uppercase tracking-wide rounded-sm hover:bg-zinc-800 transition-colors disabled:opacity-40"
+              >
+                {step < questions.length - 1 ? `Continue (${multiSelections.length} selected)` : 'Generate Program'}
+              </button>
+            </div>
+          ) : currentQ.type === 'select' ? (
             <div className="space-y-3">
               {currentQ.options?.map((opt: any) => (
                 <button
@@ -413,7 +461,7 @@ export default function Onboarding() {
           )}
         </div>
 
-        {currentQ.type === 'select' && (
+        {(currentQ.type === 'select' || currentQ.type === 'multiselect') && (
           <button
             onClick={handleSkip}
             className="w-full mt-4 text-secondary hover:text-primary text-sm font-body"
