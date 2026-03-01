@@ -55,11 +55,15 @@ export async function POST(req: Request) {
 
     const body = (await req.json()) as IngestBody;
 
-    // Helper: coerce any value to a number or null (handles "", null, undefined, "3")
-    const num = (v: unknown): number | null => {
+    // Helper: coerce any value to a number or null (handles "", null, undefined, "3", etc)
+    // Clamps to reasonable ranges to prevent numeric overflow
+    const num = (v: unknown, max: number = 999999): number | null => {
       if (v === null || v === undefined || v === '') return null;
       const n = Number(v);
-      return isNaN(n) ? null : n;
+      if (isNaN(n)) return null;
+      // Clamp to max to prevent overflow, return null if unreasonable
+      if (n > max || n < -max) return null;
+      return n;
     };
 
     // Normalize sourceDate to YYYY-MM-DD regardless of input format (e.g. "Feb 23, 2026 at 12:36 PM")
@@ -69,12 +73,12 @@ export async function POST(req: Request) {
       sourceDate = isNaN(parsed.getTime()) ? sourceDate : parsed.toISOString().slice(0, 10);
     }
 
-    // Sanitize all numeric fields
-    const weightLbs = num(body.weightLbs);
-    const weightKg = num(body.weightKg) ?? (weightLbs != null ? Math.round((weightLbs / 2.20462) * 100) / 100 : null);
+    // Sanitize all numeric fields with reasonable max values
+    const weightLbs = num(body.weightLbs, 1000);
+    const weightKg = num(body.weightKg, 500) ?? (weightLbs != null ? Math.round((weightLbs / 2.20462) * 100) / 100 : null);
     // Apple Health sleep duration can come in various units from Shortcuts
     // >3,600,000 = milliseconds, >3600 = seconds, >24 = minutes, else hours
-    const rawSleep = num(body.sleepHours);
+    const rawSleep = num(body.sleepHours, 24);
     let sleepHours: number | null = null;
     if (rawSleep != null) {
       if (rawSleep > 3_600_000) sleepHours = Math.round((rawSleep / 3_600_000) * 100) / 100; // ms → hours
@@ -82,28 +86,28 @@ export async function POST(req: Request) {
       else if (rawSleep > 24) sleepHours = Math.round((rawSleep / 60) * 100) / 100;            // minutes → hours
       else sleepHours = rawSleep;                                                               // already hours
     }
-    const sleepQuality = num(body.sleepQuality);
-    const restingHr = num(body.restingHr);
-    const hrv = num(body.hrv);
-    const steps = num(body.steps);
-    const energyLevel = num(body.energyLevel);
-    const sorenessLevel = num(body.sorenessLevel);
-    const stressLevel = num(body.stressLevel);
-    const mood = num(body.mood);
-    const waterOz = num(body.waterOz);
-    const nutritionRating = num(body.nutritionRating);
-    const activeKcalDay = num(body.activeKcalDay);
-    const leanBm = num(body.leanBM);
-    const bodyFat = num(body.bodyFat);
-    const bmi = num(body.BMI);
+    const sleepQuality = num(body.sleepQuality, 10);
+    const restingHr = num(body.restingHr, 250);
+    const hrv = num(body.hrv, 500);  // HRV in ms, max 500 is reasonable
+    const steps = num(body.steps, 100000);
+    const energyLevel = num(body.energyLevel, 10);
+    const sorenessLevel = num(body.sorenessLevel, 10);
+    const stressLevel = num(body.stressLevel, 10);
+    const mood = num(body.mood, 10);
+    const waterOz = num(body.waterOz, 500);
+    const nutritionRating = num(body.nutritionRating, 10);
+    const activeKcalDay = num(body.activeKcalDay, 10000);
+    const leanBm = num(body.leanBM, 500);
+    const bodyFat = num(body.bodyFat, 100);
+    const bmi = num(body.BMI, 100);
     const notes = body.notes && String(body.notes).trim() !== '' ? String(body.notes) : null;
 
     // Workout payload can be nested or flat (Shortcuts-friendly)
     const workoutType = body.workout?.workoutType ?? (body.workoutType ? String(body.workoutType) : null);
-    const durationMin = num(body.workout?.durationMin ?? body.durationMin);
-    const avgHr = num(body.workout?.avgHr ?? body.avgHR);
-    const maxHr = num(body.workout?.maxHr ?? body.maxHR);
-    const activeKcal = num(body.workout?.activeKcal ?? body.activeCalories);
+    const durationMin = num(body.workout?.durationMin ?? body.durationMin, 600);
+    const avgHr = num(body.workout?.avgHr ?? body.avgHR, 250);
+    const maxHr = num(body.workout?.maxHr ?? body.maxHR, 300);
+    const activeKcal = num(body.workout?.activeKcal ?? body.activeCalories, 10000);
 
     const hasMorningMetrics = [
       weightKg, weightLbs, sleepHours, sleepQuality, restingHr, hrv, steps,
