@@ -1,49 +1,57 @@
 import { sql } from '@vercel/postgres';
 import { NextRequest, NextResponse } from 'next/server';
 
-interface DuckDuckGoResult {
-  AbstractText?: string;
-  RelatedTopics?: Array<{ Text?: string }>;
-}
-
-// Fetch research snippets from DuckDuckGo API
+// Fetch real research snippets from Brave Search API
 async function fetchResearchSnippets(profile: any): Promise<string> {
   const goal = profile.goal || 'general_fitness';
   const experience = profile.experience_level || 'beginner';
-  const priorityMuscle = profile.primary_focus || 'muscle';
-  
+  const priorityMuscle = (profile.primary_focus || 'muscle').replace(/,/g, ' ');
+  const BRAVE_KEY = process.env.BRAVE_API_KEY || '';
+
+  if (!BRAVE_KEY) {
+    console.warn('No BRAVE_API_KEY — skipping web search');
+    return '';
+  }
+
   const queries = [
-    `${goal} training program ${experience} scientific research`,
-    `optimal sets reps ${goal} muscle hypertrophy evidence based`,
-    `${priorityMuscle} muscle development exercise science`
+    `${goal} resistance training ${experience} lifter science pubmed research`,
+    `optimal volume frequency ${goal} hypertrophy evidence based systematic review`,
+    `${priorityMuscle} muscle growth exercise selection research`
   ];
-  
+
   const snippets: string[] = [];
-  
+
   for (const query of queries) {
     try {
-      const encodedQuery = encodeURIComponent(query);
-      const response = await fetch(
-        `https://api.duckduckgo.com/?q=${encodedQuery}&format=json&no_html=1&skip_disambig=1`
+      const res = await fetch(
+        `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=3&result_filter=web`,
+        {
+          headers: {
+            'Accept': 'application/json',
+            'X-Subscription-Token': BRAVE_KEY
+          }
+        }
       );
-      const data: DuckDuckGoResult = await response.json();
-      
-      if (data.AbstractText) {
-        snippets.push(`[${query}]: ${data.AbstractText}`);
+      if (!res.ok) {
+        console.error(`Brave search HTTP ${res.status} for: ${query}`);
+        continue;
       }
-      
-      if (data.RelatedTopics && data.RelatedTopics.length > 0) {
-        const top3: string[] = data.RelatedTopics.slice(0, 3)
-          .map((t: any) => t.Text as string | undefined)
-          .filter((t): t is string => Boolean(t));
-        snippets.push(...top3);
+      const data = await res.json();
+      const results: Array<{ title: string; description: string; url: string }> =
+        data?.web?.results || [];
+      for (const r of results.slice(0, 3)) {
+        if (r.title && r.description) {
+          snippets.push(`SOURCE: ${r.title}\n${r.description}`);
+        }
       }
-    } catch (error) {
-      console.error(`DuckDuckGo search failed for query: ${query}`, error);
+    } catch (err) {
+      console.error(`Brave search error for "${query}":`, err);
     }
   }
-  
-  return snippets.join('\n\n');
+
+  return snippets.length > 0
+    ? `SCIENTIFIC RESEARCH CONTEXT:\n${snippets.join('\n\n')}`
+    : '';
 }
 
 // Fallback program generator when Minimax is unavailable
