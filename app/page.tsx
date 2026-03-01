@@ -22,6 +22,23 @@ interface ScheduleData {
   canTrain: boolean;
 }
 
+interface ProgramData {
+  useDefault: boolean;
+  programName?: string;
+  programData?: any;
+}
+
+interface WeekData {
+  id: string;
+  number: number;
+  days: Array<{
+    id: string;
+    title: string;
+    focus: string;
+    exercises: any[];
+  }>;
+}
+
 export default function Home() {
   const today = new Date();
   const todayStr = today.toISOString().slice(0, 10);
@@ -32,6 +49,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [pendingReport, setPendingReport] = useState(false);
   const [coachingTime, setCoachingTime] = useState('9:00 PM');
+  const [programData, setProgramData] = useState<ProgramData | null>(null);
+  const [programWeeks, setProgramWeeks] = useState<WeekData[]>([]);
 
   useEffect(() => {
     // Load coaching time from settings
@@ -72,6 +91,54 @@ export default function Home() {
           return sessionDate === todayStr && s.coaching_report_sent === false;
         });
         setPendingReport(hasPending);
+      })
+      .catch(console.error);
+
+    // Fetch program data
+    fetch('/api/program/active')
+      .then(res => res.json())
+      .then(data => {
+        setProgramData(data);
+        if (!data.useDefault && data.programData) {
+          // Convert user's program to weeks format
+          const weeksCount = data.programData.weeks || 4;
+          const daysPerWeek = data.programData.daysPerWeek || 3;
+          const days = data.programData.days || [];
+          
+          const convertedWeeks: WeekData[] = [];
+          
+          for (let w = 0; w < Math.min(weeksCount, 4); w++) {
+            const weekDays = [];
+            
+            for (let d = 0; d < daysPerWeek; d++) {
+              const dayData = days[d % days.length];
+              if (!dayData) continue;
+              
+              weekDays.push({
+                id: `w${w + 1}_d${d}`,
+                title: dayData.name || `Day ${d + 1}`,
+                focus: (dayData.muscleGroups || []).join(', '),
+                exercises: dayData.exercises || []
+              });
+            }
+            
+            // Add rest day
+            weekDays.push({
+              id: `w${w + 1}_rest`,
+              title: 'Rest',
+              focus: 'Recovery',
+              exercises: []
+            });
+            
+            convertedWeeks.push({
+              id: `week_${w + 1}`,
+              number: w + 1,
+              days: weekDays
+            });
+          }
+          
+          setProgramWeeks(convertedWeeks);
+        }
       })
       .catch(console.error);
   }, []);
@@ -332,20 +399,22 @@ export default function Home() {
         <h2 className="font-display font-semibold text-lg uppercase text-secondary border-b border-zinc-200 pb-2">Program Overview</h2>
 
         <div className="space-y-4">
-          {WEEKS.slice(0, 4).map((week) => (
+          {(programWeeks.length > 0 ? programWeeks : WEEKS).slice(0, 4).map((week) => (
             <Link key={week.id} href={`/week/${week.number}`}>
               <div className="group bg-surface border border-zinc-200 p-5 rounded-md hover:border-primary transition-all shadow-subtle active:scale-[0.99]">
                 <div className="flex justify-between items-center">
                   <div>
                     <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Week {week.number}</span>
-                    <h3 className="font-display font-bold text-xl uppercase text-primary group-hover:text-black">Hypertrophy Phase 2</h3>
+                    <h3 className="font-display font-bold text-xl uppercase text-primary group-hover:text-black">
+                      {programData?.programData?.programName || 'Hypertrophy Phase 2'}
+                    </h3>
                   </div>
                   <ArrowRight size={20} className="text-zinc-300 group-hover:text-primary transition-colors" />
                 </div>
                 <div className="mt-3 flex gap-1">
                   {['M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
                     <div key={i} className="h-1 flex-1 bg-zinc-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-accent transition-all duration-500 delay-100" style={{ width: i < 3 ? '100%' : '0%' }}></div>
+                      <div className="h-full bg-accent transition-all duration-500 delay-100" style={{ width: i < (programWeeks.length > 0 ? week.days.filter((d: any) => d.exercises && d.exercises.length > 0).length : 3) ? '100%' : '0%' }}></div>
                     </div>
                   ))}
                 </div>

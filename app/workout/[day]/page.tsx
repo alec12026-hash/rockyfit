@@ -1,13 +1,49 @@
+import { sql } from '@vercel/postgres';
 import { getWorkoutById, WEEKS } from '@/lib/program';
+import { getUserIdFromRequest } from '@/lib/auth';
 import Link from 'next/link';
 import WorkoutView from '@/app/components/WorkoutView';
+import { headers } from 'next/headers';
+
+// Helper to convert generated program data to workout format
+function findWorkoutInProgram(programData: any, workoutId: string) {
+  const days = programData.days || [];
+  
+  for (const day of days) {
+    // Try to match by ID or title
+    const dayId = day.name.toLowerCase().replace(/ /g, '_');
+    if (dayId === workoutId || day.name.toLowerCase().includes(workoutId)) {
+      return {
+        id: workoutId,
+        title: day.name,
+        focus: (day.muscleGroups || []).join(', '),
+        exercises: (day.exercises || []).map((ex: any, idx: number) => ({
+          id: `${workoutId}_${idx}`,
+          name: ex.name,
+          sets: ex.sets,
+          reps: ex.reps,
+          rest: ex.rest,
+          notes: ex.rationale
+        }))
+      };
+    }
+  }
+  return null;
+}
 
 export default async function WorkoutPage({ params }: { params: Promise<{ day: string }> }) {
   // 1. Await params (Next.js 15+ requirement)
   const resolvedParams = await params;
   const rawDay = decodeURIComponent(resolvedParams.day);
 
-  // 2. Resolve Workout ID (New or Legacy)
+  // Get user ID from headers/cookies
+  const headersList = await headers();
+  const request = new Request('http://localhost', {
+    headers: Object.fromEntries(headersList.entries())
+  });
+  const userId = getUserIdFromRequest(request);
+
+  // 2. Resolve Workout ID (New or Legacy) - check hardcoded first
   let workout = getWorkoutById(rawDay);
   
   if (!workout && rawDay) {
@@ -21,7 +57,30 @@ export default async function WorkoutPage({ params }: { params: Promise<{ day: s
     }
   }
 
-  // 3. Handle Not Found
+  // 3. For non-Alec users, also check their generated program
+  if (!workout && userId !== 1) {
+    try {
+      // Query for user's active program
+      const { rows } = await sql`
+        SELECT program_data
+        FROM user_programs
+        WHERE user_id = ${userId} AND is_active = TRUE
+        ORDER BY created_at DESC
+        LIMIT 1
+      `;
+
+      if (rows.length > 0) {
+        const found = findWorkoutInProgram(rows[0].program_data, rawDay);
+        if (found) {
+          workout = found;
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching user program:', e);
+    }
+  }
+
+  // 4. Handle Not Found
   if (!workout) {
     return (
       <div className="p-6 pb-24 min-h-screen bg-background">
@@ -34,6 +93,6 @@ export default async function WorkoutPage({ params }: { params: Promise<{ day: s
     );
   }
 
-  // 4. Render Client View
+  // 5. Render Client View
   return <WorkoutView workout={workout} dayId={rawDay} />;
 }

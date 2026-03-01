@@ -1,22 +1,26 @@
 import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
 import { getWeek } from '@/lib/program';
+import { getUserIdFromRequest } from '@/lib/auth';
 
 // GET /api/schedule/smart - Get smart schedule recommendations
 export async function GET(request: Request) {
   try {
-    // Get recent readiness scores (last 3 days)
+    const userId = getUserIdFromRequest(request);
+    
+    // Get recent readiness scores (last 3 days) - user-specific
     const readinessData = await sql`
       SELECT source_date, readiness_score, readiness_zone, sleep_hours, hrv
       FROM health_daily 
-      WHERE source_date >= NOW() - INTERVAL '3 days'
+      WHERE user_id = ${userId} AND source_date >= NOW() - INTERVAL '3 days'
       ORDER BY source_date DESC
     `;
 
-    // Get upcoming scheduled workouts
+    // Get upcoming scheduled workouts - user-specific
     const nextScheduled = await sql`
       SELECT ws.week_num, ws.day_num, ws.workout_id, ws.completed_at
       FROM workout_sessions ws
+      WHERE ws.user_id = ${userId}
       ORDER BY ws.completed_at DESC
       LIMIT 1
     `;

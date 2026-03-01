@@ -1,6 +1,51 @@
 import { sql } from '@vercel/postgres';
 import { NextRequest, NextResponse } from 'next/server';
 
+interface DuckDuckGoResult {
+  AbstractText?: string;
+  RelatedTopics?: Array<{ Text?: string }>;
+}
+
+// Fetch research snippets from DuckDuckGo API
+async function fetchResearchSnippets(profile: any): Promise<string> {
+  const goal = profile.goal || 'general_fitness';
+  const experience = profile.experience_level || 'beginner';
+  const priorityMuscle = profile.primary_focus || 'muscle';
+  
+  const queries = [
+    `${goal} training program ${experience} scientific research`,
+    `optimal sets reps ${goal} muscle hypertrophy evidence based`,
+    `${priorityMuscle} muscle development exercise science`
+  ];
+  
+  const snippets: string[] = [];
+  
+  for (const query of queries) {
+    try {
+      const encodedQuery = encodeURIComponent(query);
+      const response = await fetch(
+        `https://api.duckduckgo.com/?q=${encodedQuery}&format=json&no_html=1&skip_disambig=1`
+      );
+      const data: DuckDuckGoResult = await response.json();
+      
+      if (data.AbstractText) {
+        snippets.push(`[${query}]: ${data.AbstractText}`);
+      }
+      
+      if (data.RelatedTopics && data.RelatedTopics.length > 0) {
+        const top3: string[] = data.RelatedTopics.slice(0, 3)
+          .map((t: any) => t.Text as string | undefined)
+          .filter((t): t is string => Boolean(t));
+        snippets.push(...top3);
+      }
+    } catch (error) {
+      console.error(`DuckDuckGo search failed for query: ${query}`, error);
+    }
+  }
+  
+  return snippets.join('\n\n');
+}
+
 // Fallback program generator when Minimax is unavailable
 function generateFallbackProgram(profile: any): any {
   const daysPerWeek = parseInt(profile.workout_frequency) || 3;
@@ -188,7 +233,18 @@ export async function POST(req: NextRequest) {
 
     const userProfile = { ...profile, ...answers };
 
-    const prompt = 'Generate a personalized workout program based on the following user profile:\n\n- Experience Level: ' + (userProfile.experience_level || 'not specified') + '\n- Training Frequency: ' + (userProfile.workout_frequency || 3) + ' days per week\n- Primary Goal: ' + (userProfile.goal || 'general_fitness') + '\n- Equipment Available: ' + (userProfile.equipment || 'gym') + '\n- Injuries/Limitations: ' + (userProfile.injuries || 'none') + '\n- Age: ' + (userProfile.age || 'not specified') + '\n- Biological Sex: ' + (userProfile.biological_sex || 'not specified') + '\n- Body Weight: ' + (userProfile.body_weight || 'not specified') + ' lbs\n- Primary Focus Area: ' + (userProfile.primary_focus || 'overall balanced') + '\n- Session Duration: ' + (userProfile.session_duration || 60) + ' minutes\n- Sleep Quality: ' + (userProfile.sleep_quality || 'average') + '\n- Stress Level: ' + (userProfile.stress_level || 'moderate') + '\n\nGenerate a complete workout program with the following JSON structure (respond ONLY with valid JSON, no markdown):\n\n{\n  "programName": "string - descriptive program name with duration",\n  "weeks": number,\n  "daysPerWeek": number,\n  "goal": "string",\n  "focus": "string",\n  "progressionScheme": "string - how to progress over time",\n  "recoveryNotes": "string - recovery recommendations based on sleep and stress",\n  "days": [\n    {\n      "dayNumber": 1,\n      "name": "string (e.g., Push Day A)",\n      "muscleGroups": ["array of muscle groups"],\n      "scienceRationale": "string (1 sentence explaining why this day is structured this way)",\n      "exercises": [\n        {\n          "name": "string",\n          "sets": number,\n          "reps": "string (e.g., 8-12 or 5)",\n          "rest": "string (e.g., 90 sec or 2 min)",\n          "rationale": "string (1 sentence why this exercise)"\n        }\n      ]\n    }\n  ]\n}\n\nRequirements:\n- For beginners: compound movements, lower frequency per muscle, simpler progressions\n- For intermediate: push/pull/legs or upper/lower split, moderate volume\n- For advanced: higher frequency, advanced techniques noted\n- Match days per week to their training frequency\n- Include 5-7 exercises per training day\n- Consider injuries when selecting exercises\n- Adjust volume based on session duration\n- Account for sleep quality and stress in recovery recommendations';
+    // Fetch research snippets from DuckDuckGo for evidence-based programming
+    let researchSection = '';
+    try {
+      const researchSnippets = await fetchResearchSnippets(userProfile);
+      if (researchSnippets) {
+        researchSection = `\n\nBased on the following scientific research and evidence:\n${researchSnippets}\n\n`;
+      }
+    } catch (e) {
+      console.error('Failed to fetch research snippets:', e);
+    }
+
+    const prompt = 'Generate a personalized workout program based on the following user profile:\n\n- Experience Level: ' + (userProfile.experience_level || 'not specified') + '\n- Training Frequency: ' + (userProfile.workout_frequency || 3) + ' days per week\n- Primary Goal: ' + (userProfile.goal || 'general_fitness') + '\n- Equipment Available: ' + (userProfile.equipment || 'gym') + '\n- Injuries/Limitations: ' + (userProfile.injuries || 'none') + '\n- Age: ' + (userProfile.age || 'not specified') + '\n- Biological Sex: ' + (userProfile.biological_sex || 'not specified') + '\n- Body Weight: ' + (userProfile.body_weight || 'not specified') + ' lbs\n- Primary Focus Area: ' + (userProfile.primary_focus || 'overall balanced') + '\n- Session Duration: ' + (userProfile.session_duration || 60) + ' minutes\n- Sleep Quality: ' + (userProfile.sleep_quality || 'average') + '\n- Stress Level: ' + (userProfile.stress_level || 'moderate') + researchSection + 'Generate a complete workout program with the following JSON structure (respond ONLY with valid JSON, no markdown):\n\n{\n  "programName": "string - descriptive program name with duration",\n  "weeks": number,\n  "daysPerWeek": number,\n  "goal": "string",\n  "focus": "string",\n  "progressionScheme": "string - how to progress over time",\n  "recoveryNotes": "string - recovery recommendations based on sleep and stress",\n  "days": [\n    {\n      "dayNumber": 1,\n      "name": "string (e.g., Push Day A)",\n      "muscleGroups": ["array of muscle groups"],\n      "scienceRationale": "string (1 sentence explaining why this day is structured this way)",\n      "exercises": [\n        {\n          "name": "string",\n          "sets": number,\n          "reps": "string (e.g., 8-12 or 5)",\n          "rest": "string (e.g., 90 sec or 2 min)",\n          "rationale": "string (1 sentence why this exercise)"\n        }\n      ]\n    }\n  ]\n}\n\nRequirements:\n- For beginners: compound movements, lower frequency per muscle, simpler progressions\n- For intermediate: push/pull/legs or upper/lower split, moderate volume\n- For advanced: higher frequency, advanced techniques noted\n- Match days per week to their training frequency\n- Include 5-7 exercises per training day\n- Consider injuries when selecting exercises\n- Adjust volume based on session duration\n- Account for sleep quality and stress in recovery recommendations\n- Incorporate the scientific research principles mentioned above into your programming decisions';
 
     let programData = null;
     const aiResponse = await callMinimax(prompt);
