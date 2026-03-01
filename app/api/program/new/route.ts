@@ -147,6 +147,18 @@ export async function POST(req: NextRequest) {
     const userId = req.headers.get('x-user-id') || req.cookies.get('rockyfit_user')?.value;
     const uid = parseInt(userId || '1', 10);
 
+    // Ensure user_programs table exists
+    await sql`
+      CREATE TABLE IF NOT EXISTS user_programs (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        program_name VARCHAR(255),
+        program_data JSONB NOT NULL,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `;
+
     const { rows: [profile] } = await sql`
       SELECT 
         experience_level,
@@ -155,9 +167,9 @@ export async function POST(req: NextRequest) {
         equipment,
         injuries,
         age,
-        biological_sex,
-        body_weight,
-        primary_focus,
+        sex AS biological_sex,
+        body_weight_lbs AS body_weight,
+        priority_muscle AS primary_focus,
         session_duration,
         sleep_quality,
         stress_level
