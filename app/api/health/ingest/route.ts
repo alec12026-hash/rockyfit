@@ -57,13 +57,19 @@ export async function POST(req: Request) {
 
     // Helper: coerce any value to a number or null (handles "", null, undefined, "3", etc)
     // Clamps to reasonable ranges to prevent numeric overflow
+    // Helper: coerce any value to a number or null, round to 2 decimals to prevent precision overflow
     const num = (v: unknown, max: number = 999999): number | null => {
       if (v === null || v === undefined || v === '') return null;
-      const n = Number(v);
-      if (isNaN(n)) return null;
-      // Clamp to max to prevent overflow, return null if unreasonable
-      if (n > max || n < -max) return null;
-      return n;
+      try {
+        const s = String(v).trim();
+        if (s === '') return null;
+        const n = parseFloat(s);
+        if (isNaN(n) || !isFinite(n)) return null;
+        if (n > max || n < -max) return null;
+        return Math.round(n * 100) / 100; // Round to 2 decimals
+      } catch {
+        return null;
+      }
     };
 
     // Normalize sourceDate to YYYY-MM-DD regardless of input format (e.g. "Feb 23, 2026 at 12:36 PM")
