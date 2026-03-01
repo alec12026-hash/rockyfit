@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 const questions = [
@@ -51,18 +51,129 @@ const questions = [
     question: "Any injuries or limitations we should know about?",
     type: 'textarea',
     placeholder: 'e.g., bad knees, lower back issues, shoulder injury...'
+  },
+  // NEW QUESTIONS
+  {
+    key: 'age',
+    question: "What's your age?",
+    type: 'number',
+    placeholder: 'e.g., 25'
+  },
+  {
+    key: 'biological_sex',
+    question: "What's your biological sex?",
+    type: 'select',
+    options: [
+      { value: 'male', label: 'Male' },
+      { value: 'female', label: 'Female' },
+      { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+    ]
+  },
+  {
+    key: 'body_weight',
+    question: "What's your current body weight?",
+    type: 'number',
+    placeholder: 'Weight in lbs, e.g., 175'
+  },
+  {
+    key: 'primary_focus',
+    question: "Which body part or area do you want to prioritize?",
+    type: 'select',
+    options: [
+      { value: 'chest', label: 'Chest' },
+      { value: 'back', label: 'Back' },
+      { value: 'legs', label: 'Legs' },
+      { value: 'arms', label: 'Arms (Biceps/Triceps)' },
+      { value: 'shoulders', label: 'Shoulders' },
+      { value: 'overall', label: 'Overall Balanced' },
+    ]
+  },
+  {
+    key: 'session_duration',
+    question: "How long can you train per session?",
+    type: 'select',
+    options: [
+      { value: '45', label: '45 minutes' },
+      { value: '60', label: '60 minutes' },
+      { value: '75', label: '75 minutes' },
+      { value: '90', label: '90 minutes or more' },
+    ]
+  },
+  {
+    key: 'sleep_quality',
+    question: "How would you rate your sleep quality?",
+    type: 'select',
+    options: [
+      { value: 'poor', label: 'Poor' },
+      { value: 'average', label: 'Average' },
+      { value: 'good', label: 'Good' },
+    ]
+  },
+  {
+    key: 'stress_level',
+    question: "What's your current stress level?",
+    type: 'select',
+    options: [
+      { value: 'low', label: 'Low' },
+      { value: 'moderate', label: 'Moderate' },
+      { value: 'high', label: 'High' },
+    ]
   }
 ];
+
+const loadingMessages = [
+  "Researching optimal exercises for your goals...",
+  "Analyzing science-based training principles...",
+  "Personalizing your program structure...",
+  "Selecting exercises based on your experience...",
+  "Building your weekly split...",
+  "Finalizing your plan..."
+];
+
+type ProgramData = {
+  programName: string;
+  weeks: number;
+  daysPerWeek: number;
+  goal: string;
+  focus: string;
+  progressionScheme: string;
+  recoveryNotes: string;
+  days: Array<{
+    dayNumber: number;
+    name: string;
+    muscleGroups: string[];
+    scienceRationale: string;
+    exercises: Array<{
+      name: string;
+      sets: number;
+      reps: string;
+      rest: string;
+      rationale: string;
+    }>;
+  }>;
+};
 
 export default function Onboarding() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const [program, setProgram] = useState<ProgramData | null>(null);
   const [error, setError] = useState('');
 
   const currentQ = questions[step];
   const progress = ((step + 1) / questions.length) * 100;
+
+  // Rotating loading messages
+  useEffect(() => {
+    if (!generating) return;
+    const interval = setInterval(() => {
+      setLoadingMessageIndex((prev) => (prev + 1) % loadingMessages.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [generating]);
 
   const handleAnswer = async (value: string) => {
     const newAnswers = { ...answers, [currentQ.key]: value };
@@ -71,28 +182,45 @@ export default function Onboarding() {
     if (step < questions.length - 1) {
       setStep(step + 1);
     } else {
-      // Submit
+      // Last question - trigger loading screen then generate program
       setLoading(true);
+      setGenerating(true);
       setError('');
-      
+
       try {
-        const res = await fetch('/api/onboarding/complete', {
+        // First save onboarding responses
+        const saveRes = await fetch('/api/onboarding/complete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newAnswers)
         });
-        
-        const data = await res.json();
-        
-        if (!res.ok) {
-          throw new Error(data.error || 'Failed to complete onboarding');
+
+        const saveData = await saveRes.json();
+
+        if (!saveRes.ok) {
+          throw new Error(saveData.error || 'Failed to save onboarding');
         }
-        
-        // Redirect to home
-        router.push('/');
+
+        // Then generate the program
+        const programRes = await fetch('/api/program/new', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const programData = await programRes.json();
+
+        if (!programRes.ok) {
+          throw new Error(programData.error || 'Failed to generate program');
+        }
+
+        // Show program summary
+        setProgram(programData);
+        setGenerating(false);
+        setLoading(false);
       } catch (err: any) {
         setError(err.message);
         setLoading(false);
+        setGenerating(false);
       }
     }
   };
@@ -105,30 +233,117 @@ export default function Onboarding() {
     }
   };
 
+  // Loading screen
+  if (loading && generating) {
+    return (
+      <div className="min-h-screen bg-background text-primary flex items-center justify-center p-4">
+        <div className="max-w-md w-full text-center">
+          <h1 className="text-3xl font-display font-bold tracking-wide text-primary uppercase mb-8">
+            RockyFit
+          </h1>
+          <div className="mb-6">
+            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          </div>
+          <p className="text-lg font-display font-semibold uppercase tracking-wide text-primary mb-2">
+            Generating Your Program
+          </p>
+          <p className="text-secondary font-body animate-pulse">
+            {loadingMessages[loadingMessageIndex]}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Program summary screen
+  if (program) {
+    return (
+      <div className="min-h-screen bg-background text-primary p-4">
+        <div className="max-w-md mx-auto">
+          <div className="bg-surface rounded-sm border border-border p-6 mt-8">
+            <h1 className="text-2xl font-display font-bold uppercase tracking-wide text-primary mb-6 text-center">
+              Your Personalized Program
+            </h1>
+
+            <div className="mb-6 pb-6 border-b border-border">
+              <p className="text-lg font-display font-semibold text-primary">
+                {program.programName}
+              </p>
+              <div className="flex gap-4 mt-2 text-sm font-body text-secondary">
+                <span>{program.weeks} weeks</span>
+                <span>{program.daysPerWeek} days/week</span>
+                <span className="capitalize">{program.focus}</span>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {program.days.slice(0, 4).map((day) => (
+                <div key={day.dayNumber} className="border border-border rounded-sm p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-display font-semibold text-primary">
+                      Day {day.dayNumber}: {day.name}
+                    </h3>
+                    <span className="text-xs font-body text-secondary capitalize">
+                      {day.muscleGroups.join(', ')}
+                    </span>
+                  </div>
+                  <p className="text-xs font-body text-secondary mb-3 italic">
+                    {day.scienceRationale}
+                  </p>
+                  <div className="space-y-1">
+                    {day.exercises.slice(0, 4).map((ex, i) => (
+                      <div key={i} className="flex justify-between text-sm font-body">
+                        <span className="text-primary">{ex.name}</span>
+                        <span className="text-secondary">{ex.sets}x{ex.reps}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {program.days.length > 4 && (
+              <p className="text-center text-sm font-body text-secondary mt-4">
+                + {program.days.length - 4} more training days
+              </p>
+            )}
+
+            <button
+              onClick={() => router.push('/')}
+              className="w-full mt-6 py-4 bg-primary text-white font-display font-semibold uppercase tracking-wide rounded-sm hover:bg-zinc-800 transition-colors"
+            >
+              Let&apos;s Get Started →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background text-primary flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         {/* Progress bar */}
         <div className="mb-8">
-          <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div className="h-2 bg-border rounded-full overflow-hidden">
             <div 
-              className="h-full bg-blue-500 transition-all duration-300"
+              className="h-full bg-accent transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-gray-400 text-sm mt-2 text-center">
+          <p className="text-secondary text-sm mt-2 text-center font-body">
             Step {step + 1} of {questions.length}
           </p>
         </div>
 
         {/* Question */}
-        <div className="bg-gray-800 rounded-xl p-6">
-          <h2 className="text-xl font-semibold mb-6">
+        <div className="bg-surface rounded-sm p-6 border border-border">
+          <h2 className="text-xl font-display font-semibold mb-6 text-primary">
             {currentQ.question}
           </h2>
 
           {error && (
-            <div className="bg-red-500/20 border border-red-500 text-red-400 p-3 rounded-lg mb-4">
+            <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-sm font-body text-sm mb-4">
               {error}
             </div>
           )}
@@ -139,11 +354,36 @@ export default function Onboarding() {
                 <button
                   key={opt.value}
                   onClick={() => handleAnswer(opt.value)}
-                  className="w-full text-left p-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                  className="w-full text-left p-4 bg-background border border-border hover:border-primary rounded-sm transition-colors font-body text-primary"
                 >
                   {opt.label}
                 </button>
               ))}
+            </div>
+          ) : currentQ.type === 'number' ? (
+            <div>
+              <input
+                type="number"
+                value={answers[currentQ.key] || ''}
+                onChange={(e) => setAnswers({ ...answers, [currentQ.key]: e.target.value })}
+                placeholder={currentQ.placeholder}
+                className="w-full bg-surface border border-border rounded-sm p-3 text-primary placeholder:text-zinc-400 focus:outline-none focus:border-primary transition-colors font-body"
+              />
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={handleSkip}
+                  className="flex-1 py-3 bg-background border border-border hover:border-primary rounded-sm transition-colors font-body text-secondary"
+                >
+                  Skip
+                </button>
+                <button
+                  onClick={() => handleAnswer(answers[currentQ.key] || '')}
+                  disabled={loading}
+                  className="flex-1 py-3 bg-primary text-white font-display font-semibold uppercase tracking-wide rounded-sm hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                >
+                  {step < questions.length - 1 ? 'Next' : 'Generate Program'}
+                </button>
+              </div>
             </div>
           ) : (
             <div>
@@ -151,22 +391,22 @@ export default function Onboarding() {
                 value={answers[currentQ.key] || ''}
                 onChange={(e) => setAnswers({ ...answers, [currentQ.key]: e.target.value })}
                 placeholder={currentQ.placeholder}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                className="w-full bg-surface border border-border rounded-sm p-3 text-primary placeholder:text-zinc-400 focus:outline-none focus:border-primary transition-colors font-body"
                 rows={4}
               />
               <div className="flex gap-3 mt-4">
                 <button
                   onClick={handleSkip}
-                  className="flex-1 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                  className="flex-1 py-3 bg-background border border-border hover:border-primary rounded-sm transition-colors font-body text-secondary"
                 >
                   Skip
                 </button>
                 <button
                   onClick={() => handleAnswer(answers[currentQ.key] || '')}
                   disabled={loading}
-                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors disabled:opacity-50"
+                  className="flex-1 py-3 bg-primary text-white font-display font-semibold uppercase tracking-wide rounded-sm hover:bg-zinc-800 transition-colors disabled:opacity-50"
                 >
-                  {loading ? 'Saving...' : step < questions.length - 1 ? 'Next' : 'Complete'}
+                  {step < questions.length - 1 ? 'Next' : 'Generate Program'}
                 </button>
               </div>
             </div>
@@ -176,7 +416,7 @@ export default function Onboarding() {
         {currentQ.type === 'select' && (
           <button
             onClick={handleSkip}
-            className="w-full mt-4 text-gray-400 hover:text-gray-300 text-sm"
+            className="w-full mt-4 text-secondary hover:text-primary text-sm font-body"
           >
             Skip this question
           </button>

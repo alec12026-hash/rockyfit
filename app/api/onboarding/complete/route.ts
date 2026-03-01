@@ -31,6 +31,13 @@ export async function POST(req: NextRequest) {
         goal = ${answers.goal || null},
         equipment = ${answers.equipment || null},
         injuries = ${answers.injuries || null},
+        age = ${answers.age ? parseInt(answers.age) : null},
+        biological_sex = ${answers.biological_sex || null},
+        body_weight = ${answers.body_weight ? parseInt(answers.body_weight) : null},
+        primary_focus = ${answers.primary_focus || null},
+        session_duration = ${answers.session_duration ? parseInt(answers.session_duration) : null},
+        sleep_quality = ${answers.sleep_quality || null},
+        stress_level = ${answers.stress_level || null},
         onboarding_complete = TRUE
       WHERE user_id = ${uid}
     `;
