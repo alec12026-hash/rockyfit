@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Bell, Clock, Scale, Timer, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Bell, Clock, Scale, Timer, ChevronRight, ArrowLeft, LogOut, Mail } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 type SettingsState = {
@@ -19,6 +20,7 @@ const DEFAULT_SETTINGS: SettingsState = {
 };
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
   const [loaded, setLoaded] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -83,6 +85,17 @@ export default function SettingsPage() {
           }
         });
       }
+    }
+  };
+
+  const handleLogout = async () => {
+    if (!confirm('Are you sure you want to log out?')) return;
+    
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
     }
   };
 
@@ -192,6 +205,22 @@ export default function SettingsPage() {
               <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
             </label>
           </div>
+        </section>
+
+        {/* Logout */}
+        <section className="bg-white border border-red-200 rounded-md p-4 shadow-sm">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 text-red-600 hover:text-red-700"
+          >
+            <div className="bg-red-50 p-2 rounded-full">
+              <LogOut size={20} />
+            </div>
+            <div className="text-left">
+              <h2 className="font-display font-bold text-base uppercase">Log Out</h2>
+              <p className="text-xs text-secondary mt-1">Sign out of your account</p>
+            </div>
+          </button>
         </section>
 
         <div className="pt-4 text-center">

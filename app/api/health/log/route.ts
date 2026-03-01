@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { calculateReadiness } from '@/lib/readiness';
 import { saveHealthDaily, getTodayHealthLog, getHealthHistory, getHealthWorkoutHistory } from '@/lib/db';
+import { getUserIdFromRequest } from '@/lib/auth';
 
 // POST /api/health/log - Manual check-in from the app UI (no auth required, same-origin)
 export async function POST(req: Request) {
   try {
+    const userId = getUserIdFromRequest(req);
     const body = await req.json();
     console.log('Health log POST received:', body);
     
@@ -33,6 +35,7 @@ export async function POST(req: Request) {
 
     await saveHealthDaily({
       sourceDate,
+      userId,
       weightKg,
       weightLbs,
       sleepHours: body.sleepHours != null ? Number(body.sleepHours) : null,
@@ -68,6 +71,7 @@ export async function POST(req: Request) {
 // GET /api/health/log?date=YYYY-MM-DD — return today's or a specific day's log
 export async function GET(req: Request) {
   try {
+    const userId = getUserIdFromRequest(req);
     const url = new URL(req.url);
     const date = url.searchParams.get('date') || new URL(req.url).searchParams.get('date') || new Date().toISOString().slice(0, 10);
     const history = url.searchParams.get('history');
@@ -75,7 +79,7 @@ export async function GET(req: Request) {
     if (history) {
       const days = Number(history) || 7;
       const [rows, workouts] = await Promise.all([
-        getHealthHistory(days),
+        getHealthHistory(days, userId),
         getHealthWorkoutHistory(days),
       ]);
 
@@ -96,7 +100,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ rows: merged });
     }
 
-    const row = await getTodayHealthLog(date);
+    const row = await getTodayHealthLog(date, userId);
     return NextResponse.json({ row });
   } catch (err) {
     console.error('health log GET failed', err);

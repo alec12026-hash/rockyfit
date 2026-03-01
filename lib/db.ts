@@ -30,6 +30,7 @@ export async function getLastLog(exerciseId: string) {
 
 export async function saveHealthDaily(payload: {
   sourceDate: string;
+  userId?: number;
   weightKg?: number | null;
   weightLbs?: number | null;
   sleepHours?: number | null;
@@ -52,14 +53,16 @@ export async function saveHealthDaily(payload: {
   readinessZone?: string | null;
 }) {
   if (!hasDb) return;
+  const userId = payload.userId || 1;
   await sql`
     INSERT INTO health_daily (
-      source_date, weight_kg, weight_lbs, sleep_hours, sleep_quality, resting_hr, hrv, steps,
+      source_date, user_id, weight_kg, weight_lbs, sleep_hours, sleep_quality, resting_hr, hrv, steps,
       energy_level, soreness_level, stress_level, mood, water_oz, nutrition_rating, active_kcal_day,
       lean_bm, body_fat, bmi, notes, readiness_score, readiness_zone, updated_at
     )
     VALUES (
       ${payload.sourceDate},
+      ${userId},
       ${payload.weightKg ?? null},
       ${payload.weightLbs ?? null},
       ${payload.sleepHours ?? null},
@@ -82,7 +85,7 @@ export async function saveHealthDaily(payload: {
       ${payload.readinessZone ?? null},
       NOW()
     )
-    ON CONFLICT (source_date)
+    ON CONFLICT (source_date, user_id)
     DO UPDATE SET
       weight_kg = COALESCE(EXCLUDED.weight_kg, health_daily.weight_kg),
       weight_lbs = COALESCE(EXCLUDED.weight_lbs, health_daily.weight_lbs),
@@ -108,18 +111,19 @@ export async function saveHealthDaily(payload: {
   `;
 }
 
-export async function getTodayHealthLog(sourceDate: string) {
+export async function getTodayHealthLog(sourceDate: string, userId: number = 1) {
   if (!hasDb) return null;
   const { rows } = await sql`
-    SELECT * FROM health_daily WHERE source_date = ${sourceDate} LIMIT 1
+    SELECT * FROM health_daily WHERE source_date = ${sourceDate} AND user_id = ${userId} LIMIT 1
   `;
   return rows[0] ?? null;
 }
 
-export async function getHealthHistory(days = 7) {
+export async function getHealthHistory(days = 7, userId: number = 1) {
   if (!hasDb) return [];
   const { rows } = await sql`
     SELECT * FROM health_daily
+    WHERE user_id = ${userId}
     ORDER BY source_date DESC
     LIMIT ${days}
   `;

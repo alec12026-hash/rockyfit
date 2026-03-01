@@ -1,8 +1,10 @@
 import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
+import { getUserIdFromRequest } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const userId = getUserIdFromRequest(request);
     const { rows } = await sql`
       SELECT ws.*, 
              json_agg(json_build_object(
@@ -16,6 +18,7 @@ export async function GET() {
              ) ORDER BY wse.exercise_id, wse.set_num) as sets
       FROM workout_sessions ws
       LEFT JOIN workout_sets wse ON wse.session_id = ws.id
+      WHERE ws.user_id = ${userId}
       GROUP BY ws.id
       ORDER BY ws.completed_at DESC
       LIMIT 30
@@ -29,10 +32,19 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   try {
+    const userId = getUserIdFromRequest(req);
     const { sessionId, sets } = await req.json();
 
     if (!sessionId || !Array.isArray(sets)) {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
+    }
+
+    // Verify session belongs to user
+    const sessionCheck = await sql`
+      SELECT id FROM workout_sessions WHERE id = ${sessionId} AND user_id = ${userId}
+    `;
+    if (sessionCheck.rows.length === 0) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
     for (const s of sets) {
@@ -46,8 +58,8 @@ export async function PUT(req: Request) {
       } else if (s.exercise_id && (s.weight_lbs || s.reps)) {
         // Insert new set that wasn't logged during the workout
         await sql`
-          INSERT INTO workout_sets (session_id, exercise_id, set_num, weight_lbs, reps, rpe, is_pr)
-          VALUES (${sessionId}, ${s.exercise_id}, ${s.set_num}, ${s.weight_lbs || null}, ${s.reps || null}, ${s.rpe || null}, false)
+          INSERT INTO workout_sets (session_id, exercise_id, set_num, weight_lbs, reps, rpe, is_pr, user_id)
+          VALUES (${sessionId}, ${s.exercise_id}, ${s.set_num}, ${s.weight_lbs || null}, ${s.reps || null}, ${s.rpe || null}, false, ${userId})
         `;
       }
     }

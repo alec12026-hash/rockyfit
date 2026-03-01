@@ -1,17 +1,21 @@
 import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
+import { getUserIdFromRequest } from '@/lib/auth';
 
 // GET /api/coach/daily - Get daily coaching recommendation
 export async function GET(request: Request) {
   try {
-    // Get latest health data
+    const userId = getUserIdFromRequest(request);
+    
+    // Get latest health data (user-specific)
     const healthData = await sql`
       SELECT * FROM health_daily 
+      WHERE user_id = ${userId}
       ORDER BY source_date DESC 
       LIMIT 1
     `;
 
-    // Get recent workouts (last 7 days)
+    // Get recent workouts (last 7 days, user-specific)
     const recentWorkouts = await sql`
       SELECT ws.*, 
         json_agg(json_build_object(
@@ -22,21 +26,23 @@ export async function GET(request: Request) {
         )) as sets
       FROM workout_sessions ws
       LEFT JOIN workout_sets wse ON wse.session_id = ws.id
-      WHERE ws.completed_at > NOW() - INTERVAL '7 days'
+      WHERE ws.user_id = ${userId} AND ws.completed_at > NOW() - INTERVAL '7 days'
       GROUP BY ws.id
       ORDER BY ws.completed_at DESC
     `;
 
-    // Get current week in program
+    // Get current week in program (user-specific)
     const currentWeekRes = await sql`
       SELECT MAX(week_num) as current_week
       FROM workout_sessions
+      WHERE user_id = ${userId}
     `;
     const currentWeek = (currentWeekRes.rows[0]?.current_week || 0) + 1;
 
-    // Get personal records
+    // Get personal records (user-specific)
     const prs = await sql`
       SELECT * FROM personal_records 
+      WHERE user_id = ${userId}
       ORDER BY achieved_at DESC 
       LIMIT 10
     `;
