@@ -8,11 +8,33 @@ import { headers } from 'next/headers';
 // Helper to convert generated program data to workout format
 function findWorkoutInProgram(programData: any, workoutId: string) {
   const days = programData.days || [];
-  
+  if (!days.length) return null;
+
+  // Handle synthetic week/day IDs like w1_d0, w3_d2 from generated schedules
+  const idxMatch = workoutId.match(/^w\d+_d(\d+)$/i);
+  if (idxMatch) {
+    const dayIndex = parseInt(idxMatch[1], 10);
+    const day = days[dayIndex % days.length];
+    if (day) {
+      return {
+        id: workoutId,
+        title: day.name,
+        focus: (day.muscleGroups || []).join(', '),
+        exercises: (day.exercises || []).map((ex: any, idx: number) => ({
+          id: `${workoutId}_${idx}`,
+          name: ex.name,
+          sets: ex.sets,
+          reps: ex.reps,
+          rest: ex.rest,
+          notes: ex.rationale
+        }))
+      };
+    }
+  }
+
   for (const day of days) {
-    // Try to match by ID or title
-    const dayId = day.name.toLowerCase().replace(/ /g, '_');
-    if (dayId === workoutId || day.name.toLowerCase().includes(workoutId)) {
+    const dayId = (day.name || '').toLowerCase().replace(/ /g, '_');
+    if (dayId === workoutId || (day.name || '').toLowerCase().includes(workoutId)) {
       return {
         id: workoutId,
         title: day.name,
@@ -43,24 +65,12 @@ export default async function WorkoutPage({ params }: { params: Promise<{ day: s
   });
   const userId = getUserIdFromRequest(request);
 
-  // 2. Resolve Workout ID (New or Legacy) - check hardcoded first
-  let workout = getWorkoutById(rawDay);
-  
-  if (!workout && rawDay) {
-    // Legacy suffix match
-    for (const week of WEEKS) {
-      const found = week.days.find((d) => d.id.endsWith(`_${rawDay}`));
-      if (found) {
-        workout = found;
-        break;
-      }
-    }
-  }
+  // 2. Resolve workout based on user type
+  let workout = null;
 
-  // 3. For non-Alec users, also check their generated program
-  if (!workout && userId !== 1) {
+  // Non-Alec users: prioritize generated program first
+  if (userId !== 1) {
     try {
-      // Query for user's active program
       const { rows } = await sql`
         SELECT program_data
         FROM user_programs
@@ -70,13 +80,25 @@ export default async function WorkoutPage({ params }: { params: Promise<{ day: s
       `;
 
       if (rows.length > 0) {
-        const found = findWorkoutInProgram(rows[0].program_data, rawDay);
-        if (found) {
-          workout = found;
-        }
+        workout = findWorkoutInProgram(rows[0].program_data, rawDay);
       }
     } catch (e) {
       console.error('Error fetching user program:', e);
+    }
+  }
+
+  // Alec fallback (and legacy fallback only if still unresolved)
+  if (!workout) {
+    workout = getWorkoutById(rawDay);
+  }
+
+  if (!workout && rawDay) {
+    for (const week of WEEKS) {
+      const found = week.days.find((d) => d.id.endsWith(`_${rawDay}`));
+      if (found) {
+        workout = found;
+        break;
+      }
     }
   }
 

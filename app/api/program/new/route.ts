@@ -106,6 +106,7 @@ function generateFallbackProgram(profile: any): any {
 
   return {
     programName: programName + ' - ' + (goalLabels[goal] || 'General Fitness'),
+    researchSummary: 'Built from evidence-based training principles with emphasis on progressive overload, appropriate weekly volume, and movement selection matched to your goal and recovery profile.',
     weeks: experience === 'beginner' ? 8 : experience === 'intermediate' ? 10 : 12,
     daysPerWeek,
     goal: goalLabels[goal] || 'General Fitness',
@@ -240,10 +241,19 @@ export async function POST(req: NextRequest) {
 
     // Fetch research snippets from DuckDuckGo for evidence-based programming
     let researchSection = '';
+    let researchSummary = 'Program built from evidence-based training principles tailored to your profile.';
     try {
       const researchSnippets = await fetchResearchSnippets(userProfile);
       if (researchSnippets) {
         researchSection = `\n\nBased on the following scientific research and evidence:\n${researchSnippets}\n\n`;
+        const sourceLines = researchSnippets
+          .split('\n')
+          .filter((l: string) => l.startsWith('SOURCE:'))
+          .slice(0, 2)
+          .map((l: string) => l.replace('SOURCE:', '').trim());
+        if (sourceLines.length > 0) {
+          researchSummary = `Based on current research (including ${sourceLines.join(' and ')}), your plan prioritizes ${userProfile.goal || 'fitness'} with volume, exercise selection, and progression tailored to your ${userProfile.experience_level || 'current'} level, recovery profile, and focus areas.`;
+        }
       }
     } catch (e) {
       console.error('Failed to fetch research snippets:', e);
@@ -271,6 +281,10 @@ export async function POST(req: NextRequest) {
     if (!programData) {
       console.log('Using fallback program generator');
       programData = generateFallbackProgram(userProfile);
+    }
+
+    if (!programData.researchSummary) {
+      programData.researchSummary = researchSummary;
     }
 
     await sql`

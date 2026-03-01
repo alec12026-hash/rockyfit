@@ -140,6 +140,7 @@ type ProgramData = {
   focus: string;
   progressionScheme: string;
   recoveryNotes: string;
+  researchSummary?: string;
   days: Array<{
     dayNumber: number;
     name: string;
@@ -322,6 +323,13 @@ export default function Onboarding() {
                 + {program.days.length - 4} more training days
               </p>
             )}
+
+            <div className="mt-6 p-4 border border-border rounded-sm bg-zinc-50">
+              <p className="text-xs font-display uppercase tracking-wide text-secondary mb-2">Why this program was built this way</p>
+              <p className="text-sm font-body text-primary leading-relaxed">
+                {program.researchSummary || 'This program structure was selected from current evidence-based resistance training research and tailored to your goal, experience level, recovery profile, and prioritized muscle groups.'}
+              </p>
+            </div>
 
             <button
               onClick={() => router.push('/')}
