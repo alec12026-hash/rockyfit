@@ -141,6 +141,8 @@ type ProgramData = {
   progressionScheme: string;
   recoveryNotes: string;
   researchSummary?: string;
+  whyBuiltThisWay?: string;
+  sourcesUsed?: Array<{ title: string; url?: string; snippet: string }>;
   days: Array<{
     dayNumber: number;
     name: string;
@@ -324,11 +326,26 @@ export default function Onboarding() {
               </p>
             )}
 
-            <div className="mt-6 p-4 border border-border rounded-sm bg-zinc-50">
-              <p className="text-xs font-display uppercase tracking-wide text-secondary mb-2">Why this program was built this way</p>
+            <div className="mt-6 p-4 border border-border rounded-sm bg-zinc-50 space-y-3">
+              <p className="text-xs font-display uppercase tracking-wide text-secondary">Research-informed rationale</p>
               <p className="text-sm font-body text-primary leading-relaxed">
                 {program.researchSummary || 'This program structure was selected from current evidence-based resistance training research and tailored to your goal, experience level, recovery profile, and prioritized muscle groups.'}
               </p>
+              <p className="text-sm font-body text-primary leading-relaxed">
+                {program.whyBuiltThisWay || 'We structured your split, exercise selection, and progression to match your training frequency, available session time, and recovery capacity so you can progress sustainably.'}
+              </p>
+              {program.sourcesUsed && program.sourcesUsed.length > 0 && (
+                <div>
+                  <p className="text-xs font-display uppercase tracking-wide text-secondary mb-2">Sources reviewed</p>
+                  <ul className="space-y-1">
+                    {program.sourcesUsed.slice(0, 3).map((s, i) => (
+                      <li key={i} className="text-xs font-body text-primary">
+                        • {s.url ? <a href={s.url} target="_blank" rel="noreferrer" className="underline hover:no-underline">{s.title}</a> : s.title}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             <button

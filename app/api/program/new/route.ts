@@ -1,8 +1,10 @@
 import { sql } from '@vercel/postgres';
 import { NextRequest, NextResponse } from 'next/server';
 
+type SourceItem = { title: string; url?: string; snippet: string };
+
 // Fetch real research snippets from Brave Search API
-async function fetchResearchSnippets(profile: any): Promise<string> {
+async function fetchResearchSnippets(profile: any): Promise<{ context: string; sources: SourceItem[] }> {
   const goal = profile.goal || 'general_fitness';
   const experience = profile.experience_level || 'beginner';
   const priorityMuscle = (profile.primary_focus || 'muscle').replace(/,/g, ' ');
@@ -10,7 +12,7 @@ async function fetchResearchSnippets(profile: any): Promise<string> {
 
   if (!BRAVE_KEY) {
     console.warn('No BRAVE_API_KEY — skipping web search');
-    return '';
+    return { context: '', sources: [] };
   }
 
   const queries = [
@@ -20,6 +22,7 @@ async function fetchResearchSnippets(profile: any): Promise<string> {
   ];
 
   const snippets: string[] = [];
+  const sources: SourceItem[] = [];
 
   for (const query of queries) {
     try {
@@ -42,6 +45,7 @@ async function fetchResearchSnippets(profile: any): Promise<string> {
       for (const r of results.slice(0, 3)) {
         if (r.title && r.description) {
           snippets.push(`SOURCE: ${r.title}\n${r.description}`);
+          sources.push({ title: r.title, url: r.url, snippet: r.description });
         }
       }
     } catch (err) {
@@ -49,9 +53,10 @@ async function fetchResearchSnippets(profile: any): Promise<string> {
     }
   }
 
-  return snippets.length > 0
-    ? `SCIENTIFIC RESEARCH CONTEXT:\n${snippets.join('\n\n')}`
-    : '';
+  return {
+    context: snippets.length > 0 ? `SCIENTIFIC RESEARCH CONTEXT:\n${snippets.join('\n\n')}` : '',
+    sources
+  };
 }
 
 // Fallback program generator when Minimax is unavailable
@@ -193,6 +198,56 @@ async function callMinimax(prompt: string): Promise<string | null> {
   }
 }
 
+async function orchestrateResearchNarrativeWithOpenAI(input: {
+  profile: any;
+  programData: any;
+  sources: SourceItem[];
+}): Promise<{ researchSummary: string; whyBuiltThisWay: string }> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    return {
+      researchSummary: 'This plan uses evidence-based resistance training principles and your profile to set volume, exercise selection, and progression.',
+      whyBuiltThisWay: 'The program balances progressive overload, recovery capacity, and your stated priorities to maximize consistency and results.'
+    };
+  }
+
+  const sourceText = input.sources.slice(0, 5).map((s, i) => `${i + 1}. ${s.title} — ${s.url || 'no url'}`).join('\n');
+  const prompt = `You are an elite fitness coach and science communicator.\nCreate two polished paragraphs for an app user:\n\n1) researchSummary (2-3 sentences): cite the source titles naturally and explain what evidence was considered.\n2) whyBuiltThisWay (3-4 sentences): clearly explain why this specific program structure was chosen for this user.\n\nUser profile: ${JSON.stringify(input.profile)}\nProgram: ${JSON.stringify({ programName: input.programData?.programName, daysPerWeek: input.programData?.daysPerWeek, focus: input.programData?.focus, progressionScheme: input.programData?.progressionScheme })}\nSources:\n${sourceText}\n\nReturn ONLY JSON with keys: researchSummary, whyBuiltThisWay.`;
+
+  try {
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.4,
+        max_tokens: 400
+      })
+    });
+
+    if (!resp.ok) throw new Error(`OpenAI ${resp.status}`);
+    const data = await resp.json();
+    let content = data?.choices?.[0]?.message?.content || '';
+    content = content.replace(/```json|```/gi, '').trim();
+    const m = content.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(m ? m[0] : content);
+    return {
+      researchSummary: parsed.researchSummary || '',
+      whyBuiltThisWay: parsed.whyBuiltThisWay || ''
+    };
+  } catch (e) {
+    console.error('OpenAI orchestration failed:', e);
+    return {
+      researchSummary: 'This plan uses evidence-based resistance training principles and your profile to set volume, exercise selection, and progression.',
+      whyBuiltThisWay: 'The program balances progressive overload, recovery capacity, and your stated priorities to maximize consistency and results.'
+    };
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const userId = req.headers.get('x-user-id') || req.cookies.get('rockyfit_user')?.value;
@@ -242,19 +297,15 @@ export async function POST(req: NextRequest) {
     // Fetch research snippets from DuckDuckGo for evidence-based programming
     let researchSection = '';
     let researchSummary = 'Program built from evidence-based training principles tailored to your profile.';
+    let whyBuiltThisWay = 'The program structure reflects your goals, available training time, and recovery profile.';
+    let sourcesUsed: SourceItem[] = [];
+
     try {
-      const researchSnippets = await fetchResearchSnippets(userProfile);
-      if (researchSnippets) {
-        researchSection = `\n\nBased on the following scientific research and evidence:\n${researchSnippets}\n\n`;
-        const sourceLines = researchSnippets
-          .split('\n')
-          .filter((l: string) => l.startsWith('SOURCE:'))
-          .slice(0, 2)
-          .map((l: string) => l.replace('SOURCE:', '').trim());
-        if (sourceLines.length > 0) {
-          researchSummary = `Based on current research (including ${sourceLines.join(' and ')}), your plan prioritizes ${userProfile.goal || 'fitness'} with volume, exercise selection, and progression tailored to your ${userProfile.experience_level || 'current'} level, recovery profile, and focus areas.`;
-        }
+      const research = await fetchResearchSnippets(userProfile);
+      if (research.context) {
+        researchSection = `\n\nBased on the following scientific research and evidence:\n${research.context}\n\n`;
       }
+      sourcesUsed = research.sources || [];
     } catch (e) {
       console.error('Failed to fetch research snippets:', e);
     }
@@ -283,19 +334,27 @@ export async function POST(req: NextRequest) {
       programData = generateFallbackProgram(userProfile);
     }
 
-    if (!programData.researchSummary) {
-      programData.researchSummary = researchSummary;
-    }
+    const orchestration = await orchestrateResearchNarrativeWithOpenAI({
+      profile: userProfile,
+      programData,
+      sources: sourcesUsed
+    });
 
-    await sql`
+    programData.researchSummary = orchestration.researchSummary || programData.researchSummary || researchSummary;
+    programData.whyBuiltThisWay = orchestration.whyBuiltThisWay || programData.whyBuiltThisWay || whyBuiltThisWay;
+    programData.sourcesUsed = sourcesUsed.slice(0, 5);
+
+    const insertRes = await sql`
       INSERT INTO user_programs (user_id, program_name, program_data, is_active)
       VALUES (${uid}, ${programData.programName}, ${JSON.stringify(programData)}, TRUE)
+      RETURNING id
     `;
 
+    const newProgramId = insertRes.rows[0]?.id;
     await sql`
       UPDATE user_programs 
       SET is_active = FALSE 
-      WHERE user_id = ${uid} AND program_name != ${programData.programName}
+      WHERE user_id = ${uid} AND id != ${newProgramId}
     `;
 
     return NextResponse.json(programData);
