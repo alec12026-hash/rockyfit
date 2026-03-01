@@ -18,21 +18,19 @@ export async function GET() {
     results.braveError = e.message;
   }
 
-  // Test Minimax key access
+  // Test Minimax via env var
+  const mmKey = process.env.MINIMAX_API_KEY || '';
+  results.hasMinimaxKey = Boolean(mmKey);
+  results.minimaxKeyLength = mmKey.length;
   try {
-    const fs = require('fs');
-    const authPath = `${process.env.HOME}/.openclaw/agents/main/agent/auth-profiles.json`;
-    results.authPathExists = fs.existsSync(authPath);
-    const auth = JSON.parse(fs.readFileSync(authPath, 'utf8'));
-    const key = auth?.profiles?.['minimax:default']?.key || '';
-    results.hasMinimaxKey = Boolean(key);
-
     const mmRes = await fetch('https://api.minimax.io/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'MiniMax-M2.5', messages: [{ role: 'user', content: 'Say OK' }], max_tokens: 5 })
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${mmKey}` },
+      body: JSON.stringify({ model: 'MiniMax-M2.5', messages: [{ role: 'user', content: 'Say OK' }], max_tokens: 10 })
     });
     results.minimaxStatus = mmRes.status;
+    const mmData = await mmRes.json();
+    results.minimaxResponse = mmData?.choices?.[0]?.message?.content || JSON.stringify(mmData).slice(0, 100);
   } catch (e: any) {
     results.minimaxError = e.message;
   }
