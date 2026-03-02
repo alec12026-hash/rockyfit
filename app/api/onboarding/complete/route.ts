@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
         body_weight_lbs = ${answers.body_weight ? parseFloat(answers.body_weight) : null},
         priority_muscle = ${answers.primary_focus || null},
         session_duration = ${answers.session_duration || null},
+        coaching_report_time = ${answers.coaching_report_time || null},
         sleep_quality = ${answers.sleep_quality || null},
         stress_level = ${answers.stress_level || null},
         onboarding_complete = TRUE
