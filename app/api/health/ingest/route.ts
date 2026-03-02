@@ -53,6 +53,7 @@ export async function POST(req: Request) {
       { token: process.env.HEALTH_INGEST_TOKEN1, email: process.env.HEALTH_INGEST_TOKEN1_EMAIL },
       { token: process.env.HEALTH_INGEST_TOKEN2, email: process.env.HEALTH_INGEST_TOKEN2_EMAIL },
       { token: process.env.HEALTH_INGEST_TOKEN3, email: process.env.HEALTH_INGEST_TOKEN3_EMAIL },
+      { token: process.env.HEALTH_INGEST_TOKEN_VICA, email: process.env.HEALTH_INGEST_TOKEN_VICA_EMAIL },
     ].filter(b => b.token && b.email) as Array<{ token: string; email: string }>;
 
     if (tokenBindings.length === 0) {
