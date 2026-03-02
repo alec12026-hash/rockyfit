@@ -44,7 +44,10 @@ function outOfScope(text: string): boolean {
   ];
   const fitnessHints = [
     'workout', 'lift', 'reps', 'sets', 'rpe', 'sleep', 'soreness', 'hrv', 'program',
-    'exercise', 'recovery', 'nutrition', 'calories', 'cardio', 'strength', 'hypertrophy'
+    'exercise', 'recovery', 'nutrition', 'calories', 'cardio', 'strength', 'hypertrophy',
+    'rdl', 'squat', 'deadlift', 'bench', 'press', 'curl', 'row', 'calf', 'leg', 'back',
+    'tight', 'pain', 'ache', 'stiff', 'mobility', 'warmup', 'stretch', 'foam', 'roll',
+    'push', 'pull', 'gym', 'training', 'muscle', 'bodyweight', 'deload', 'fatigue'
   ];
   if (forbidden.some(k => s.includes(k))) return true;
   if (!fitnessHints.some(k => s.includes(k))) return true;
