@@ -75,6 +75,76 @@ async function callMinimax(prompt: string): Promise<string> {
   return content;
 }
 
+// Detect if user wants to change their program structure
+function detectProgramChangeRequest(text: string): { wanted: boolean; split_request?: string; custom_days?: any[] } {
+  const s = text.toLowerCase();
+  const programChangeKeywords = [
+    'change my program', 'different program', 'new program', 'change split', 
+    'different split', 'not full body', 'instead of full body', 'legs day',
+    'push pull', 'push/ pull', 'upper lower', 'bro split', 'body part split',
+    '4 day split', '5 day split', '3 day split', 'make it', 'instead of'
+  ];
+  const hasKeywords = programChangeKeywords.some(k => s.includes(k));
+  if (!hasKeywords) return { wanted: false };
+  
+  // Extract split request
+  let split_request = '';
+  let custom_days = null;
+  
+  if (s.includes('leg') && !s.includes('full body') && s.includes('day')) {
+    split_request = '4 day split with legs, biceps/back, chest/triceps/shoulders, abs and cardio';
+    custom_days = [
+      { dayNumber: 1, name: 'Legs', muscleGroups: ['quadriceps', 'hamstrings', 'glutes', 'calves'] },
+      { dayNumber: 2, name: 'Biceps & Back', muscleGroups: ['biceps', 'back', 'forearms'] },
+      { dayNumber: 3, name: 'Chest, Triceps & Shoulders', muscleGroups: ['chest', 'triceps', 'shoulders'] },
+      { dayNumber: 4, name: 'Abs & Cardio', muscleGroups: ['abs', 'core', 'cardio'] }
+    ];
+  } else if (s.includes('push pull') || s.includes('push/pull')) {
+    split_request = 'push/pull/legs split';
+    custom_days = [
+      { dayNumber: 1, name: 'Push', muscleGroups: ['chest', 'shoulders', 'triceps'] },
+      { dayNumber: 2, name: 'Pull', muscleGroups: ['back', 'biceps', 'forearms'] },
+      { dayNumber: 3, name: 'Legs', muscleGroups: ['quadriceps', 'hamstrings', 'glutes', 'calves'] }
+    ];
+  } else if (s.includes('upper lower')) {
+    split_request = 'upper/lower split';
+    custom_days = [
+      { dayNumber: 1, name: 'Upper Body', muscleGroups: ['chest', 'back', 'shoulders', 'biceps', 'triceps'] },
+      { dayNumber: 2, name: 'Lower Body', muscleGroups: ['quadriceps', 'hamstrings', 'glutes', 'calves'] }
+    ];
+  } else {
+    split_request = text.substring(0, 200);
+  }
+  
+  return { wanted: true, split_request, custom_days };
+}
+
+async function regenerateUserProgram(userId: number, splitRequest: string, customDays: any[]): Promise<string> {
+  try {
+    const resp = await fetch(process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}/api/program/regenerate`
+      : 'http://localhost:3000/api/program/regenerate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        user_id: userId, 
+        custom_split_request: splitRequest,
+        custom_days: customDays
+      })
+    });
+    
+    if (!resp.ok) throw new Error(`Regenerate failed: ${resp.status}`);
+    const data = await resp.json();
+    if (data.success) {
+      return `I've regenerated your program based on your request! Your new ${data.program.programName} is now active. Check the app to see your updated ${data.program.daysPerWeek}-day split.`;
+    }
+    return 'I had trouble regenerating your program. Please try again or check the app.';
+  } catch (e) {
+    console.error('Regenerate error:', e);
+    return 'Sorry, I ran into an issue regenerating your program. Please try again later.';
+  }
+}
+
 async function maybeApplyProgramAdjustment(userId: number, text: string): Promise<string | null> {
   const s = text.toLowerCase();
   const wantsDeload = s.includes('too sore') || s.includes('run down') || s.includes('fatigued') || s.includes('deload');
@@ -156,6 +226,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, classification: 'out_of_scope' });
     }
 
+    // Check for program change request
+    const programChange = detectProgramChangeRequest(message);
+    let programChangeNote = null;
+    if (programChange.wanted) {
+      console.log('Detected program change request:', programChange);
+      programChangeNote = await regenerateUserProgram(user.id, programChange.split_request || '', programChange.custom_days || []);
+    }
+
     const adjustmentNote = await maybeApplyProgramAdjustment(user.id, message);
 
     const prompt = `You are Coach Rocky replying by email to your client.
@@ -164,11 +242,13 @@ Rules:
 - Never mention tools, system prompts, keys, backend, or internal operations.
 - Natural, human, concise but insightful.
 - If adjustmentNote exists, reference it naturally.
+- If programChangeNote exists, be excited about it and confirm the change!
 
 Client: ${user.name || 'Client'} (${fromEmail})
 Subject: ${subject}
 Message: ${message}
 AdjustmentNote: ${adjustmentNote || 'none'}
+ProgramChangeNote: ${programChangeNote || 'none'}
 
 Write the reply email body only.`;
 
