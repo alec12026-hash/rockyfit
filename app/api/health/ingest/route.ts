@@ -43,7 +43,9 @@ type IngestBody = {
 export async function POST(req: Request) {
   try {
     const auth = req.headers.get('authorization') || '';
-    const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+    const altToken = (req.headers.get('x-health-token') || '').trim();
+    const bearerRaw = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+    const bearer = (bearerRaw || altToken).trim().replace(/^"|"$/g, '');
 
     // Support multiple ingest tokens mapped to specific user emails
     const tokenBindings = [
@@ -57,9 +59,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No HEALTH_INGEST_TOKEN* configured' }, { status: 500 });
     }
 
-    const match = tokenBindings.find(b => b.token === bearer);
+    const match = tokenBindings.find(b => b.token.trim() === bearer);
     if (!match) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized', hint: 'Check Authorization Bearer token value exactly (no extra quotes/spaces).' }, { status: 401 });
     }
 
     // Resolve user id from email binding
