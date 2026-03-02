@@ -116,7 +116,7 @@ function detectProgramChangeRequest(text: string): { wanted: boolean; split_requ
     split_request = text.substring(0, 200);
   }
   
-  return { wanted: true, split_request, custom_days };
+  return { wanted: true, split_request, custom_days: custom_days || [] };
 }
 
 async function regenerateUserProgram(userId: number, splitRequest: string, customDays: any[]): Promise<string> {
