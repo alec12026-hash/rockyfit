@@ -42,15 +42,32 @@ type IngestBody = {
 
 export async function POST(req: Request) {
   try {
-    const token = process.env.HEALTH_INGEST_TOKEN;
     const auth = req.headers.get('authorization') || '';
+    const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
 
-    if (!token) {
-      return NextResponse.json({ error: 'HEALTH_INGEST_TOKEN not configured' }, { status: 500 });
+    // Support multiple ingest tokens mapped to specific user emails
+    const tokenBindings = [
+      { token: process.env.HEALTH_INGEST_TOKEN, email: process.env.HEALTH_INGEST_TOKEN_EMAIL || 'alec12026@gmail.com' },
+      { token: process.env.HEALTH_INGEST_TOKEN1, email: process.env.HEALTH_INGEST_TOKEN1_EMAIL },
+      { token: process.env.HEALTH_INGEST_TOKEN2, email: process.env.HEALTH_INGEST_TOKEN2_EMAIL },
+      { token: process.env.HEALTH_INGEST_TOKEN3, email: process.env.HEALTH_INGEST_TOKEN3_EMAIL },
+    ].filter(b => b.token && b.email) as Array<{ token: string; email: string }>;
+
+    if (tokenBindings.length === 0) {
+      return NextResponse.json({ error: 'No HEALTH_INGEST_TOKEN* configured' }, { status: 500 });
     }
 
-    if (auth !== `Bearer ${token}`) {
+    const match = tokenBindings.find(b => b.token === bearer);
+    if (!match) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Resolve user id from email binding
+    const { sql } = await import('@vercel/postgres');
+    const userRes = await sql`SELECT id FROM users WHERE LOWER(email) = LOWER(${match.email}) LIMIT 1`;
+    const userId = userRes.rows[0]?.id as number | undefined;
+    if (!userId) {
+      return NextResponse.json({ error: `No user found for token binding email: ${match.email}` }, { status: 400 });
     }
 
     const body = (await req.json()) as IngestBody;
@@ -140,6 +157,7 @@ export async function POST(req: Request) {
 
       await saveHealthDaily({
         sourceDate,
+        userId,
         weightKg,
         weightLbs,
         sleepHours,
@@ -167,6 +185,7 @@ export async function POST(req: Request) {
     if (hasWorkoutMetrics) {
       await saveHealthWorkout({
         sourceDate,
+        userId,
         workoutType: workoutType ?? undefined,
         durationMin: durationMin ?? undefined,
         avgHr: avgHr ?? undefined,
@@ -177,6 +196,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
+      userId,
+      mappedEmail: match.email,
       readiness: adjustedScore != null && adjustedZone != null ? { score: adjustedScore, zone: adjustedZone } : null,
       received: {
         sourceDate,

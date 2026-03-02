@@ -143,6 +143,7 @@ export async function getHealthWorkoutHistory(days = 7) {
 
 export async function saveHealthWorkout(payload: {
   sourceDate: string;
+  userId?: number;
   workoutType?: string | null;
   durationMin?: number | null;
   avgHr?: number | null;
@@ -150,10 +151,12 @@ export async function saveHealthWorkout(payload: {
   activeKcal?: number | null;
 }) {
   if (!hasDb) return;
+  const userId = payload.userId || 1;
   await sql`
-    INSERT INTO health_workouts (source_date, workout_type, duration_min, avg_hr, max_hr, active_kcal, created_at)
+    INSERT INTO health_workouts (source_date, user_id, workout_type, duration_min, avg_hr, max_hr, active_kcal, created_at)
     VALUES (
       ${payload.sourceDate},
+      ${userId},
       ${payload.workoutType ?? null},
       ${payload.durationMin ?? null},
       ${payload.avgHr ?? null},
