@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Chakra_Petch, Manrope } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import ServiceWorker from "./components/ServiceWorker";
 import BottomNav from "./components/BottomNav";
@@ -40,20 +41,24 @@ export const metadata: Metadata = {
   }
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") || "/";
+  const showBottomNav = !pathname.startsWith("/onboarding") && !pathname.startsWith("/login") && !pathname.startsWith("/signup");
+
   return (
     <html lang="en">
       <body className={`${chakra.variable} ${manrope.variable} font-body bg-background text-primary antialiased`}>
         <ServiceWorker />
         <AuthProvider>
-          <main className="min-h-screen pb-20 max-w-md mx-auto bg-surface shadow-2xl overflow-hidden border-x border-zinc-200">
+          <main className={`min-h-screen ${showBottomNav ? 'pb-20' : ''} max-w-md mx-auto bg-surface shadow-2xl overflow-hidden border-x border-zinc-200`}>
             {children}
           </main>
-          <BottomNav />
+          {showBottomNav && <BottomNav />}
         </AuthProvider>
       </body>
     </html>
