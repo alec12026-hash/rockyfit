@@ -69,8 +69,8 @@ export default function ExerciseInfoSheet({ exerciseId, exerciseName, onClose }:
     <>
       <div className="fixed inset-0 bg-black/50 z-50 animate-in fade-in duration-200" onClick={onClose} />
 
-      <div className="fixed bottom-0 left-0 right-0 z-50 animate-in slide-in-from-bottom duration-300 ease-out">
-        <div className="bg-surface max-w-md mx-auto rounded-t-lg shadow-2xl max-h-[85vh] overflow-hidden flex flex-col">
+      <div className="fixed inset-x-0 bottom-0 top-[4vh] z-50 animate-in slide-in-from-bottom duration-300 ease-out">
+        <div className="bg-surface max-w-lg mx-auto rounded-t-lg shadow-2xl h-full overflow-hidden flex flex-col">
           <div className="flex justify-center pt-3 pb-1">
             <div className="w-10 h-1 bg-zinc-300 rounded-full" />
           </div>
@@ -82,26 +82,30 @@ export default function ExerciseInfoSheet({ exerciseId, exerciseName, onClose }:
             </button>
           </div>
 
-          <div className="overflow-y-auto p-4 flex-1 space-y-4">
+          <div className="overflow-y-auto overscroll-contain p-4 pb-24 flex-1 space-y-4">
             <div className="rounded-md overflow-hidden border border-zinc-200 bg-zinc-950">
               {!videoFailed ? (
-                <video
-                  key={demo.src}
-                  className="w-full h-52 object-cover"
-                  src={demo.src}
-                  poster={demo.poster}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  controls
-                  preload="metadata"
-                  onError={() => setVideoFailed(true)}
-                />
+                <div className="w-full max-h-[56vh] bg-zinc-950 flex items-center justify-center">
+                  <video
+                    key={demo.src}
+                    className="w-full max-h-[56vh] aspect-[9/16] object-contain bg-zinc-950"
+                    src={demo.src}
+                    poster={demo.poster}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    controls
+                    preload="metadata"
+                    onError={() => setVideoFailed(true)}
+                  />
+                </div>
               ) : remoteGifUrl ? (
-                <img src={remoteGifUrl} alt={`${displayName} animation`} className="w-full h-52 object-contain bg-zinc-900" />
+                <div className="w-full max-h-[56vh] bg-zinc-950 flex items-center justify-center">
+                  <img src={remoteGifUrl} alt={`${displayName} animation`} className="w-full max-h-[56vh] aspect-[9/16] object-contain bg-zinc-900" />
+                </div>
               ) : (
-                <div className="h-52 flex items-center justify-center text-center px-4">
+                <div className="h-[48vh] min-h-[280px] flex items-center justify-center text-center px-4">
                   <div>
                     <PlayCircle className="mx-auto mb-2 text-zinc-500" size={28} />
                     <p className="text-zinc-300 font-body text-sm">Finding animation for this exercise...</p>
