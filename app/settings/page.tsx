@@ -7,6 +7,7 @@ import Link from 'next/link';
 
 type SettingsState = {
   coaching_report_time: string;
+  coaching_emails_enabled: boolean;
   rest_timer_minutes: string;
   units: 'lbs' | 'kg';
   notifications_enabled: boolean;
@@ -14,6 +15,7 @@ type SettingsState = {
 
 const DEFAULT_SETTINGS: SettingsState = {
   coaching_report_time: '21:00',
+  coaching_emails_enabled: true,
   rest_timer_minutes: '2',
   units: 'lbs',
   notifications_enabled: false,
@@ -46,6 +48,8 @@ export default function SettingsPage() {
           const parsedData = { ...data };
           if (parsedData.notifications_enabled === 'true') parsedData.notifications_enabled = true;
           if (parsedData.notifications_enabled === 'false') parsedData.notifications_enabled = false;
+          if (parsedData.coaching_emails_enabled === 'true') parsedData.coaching_emails_enabled = true;
+          if (parsedData.coaching_emails_enabled === 'false') parsedData.coaching_emails_enabled = false;
           
           setSettings(prev => {
             const newSettings = { ...prev, ...parsedData };
@@ -93,7 +97,8 @@ export default function SettingsPage() {
     
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/login');
+      // Force hard redirect to clear auth state
+      window.location.href = '/login';
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -111,25 +116,43 @@ export default function SettingsPage() {
 
       <div className="p-6 space-y-6">
         
-        {/* Coaching Report Time */}
+        {/* Coaching Emails + Time */}
         <section className="bg-white border border-zinc-200 rounded-md p-4 shadow-sm">
-          <div className="flex items-start gap-3 mb-4">
-            <div className="bg-primary/10 p-2 rounded-full text-primary">
-              <Clock size={20} />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-start gap-3">
+              <div className="bg-primary/10 p-2 rounded-full text-primary">
+                <Mail size={20} />
+              </div>
+              <div>
+                <h2 className="font-display font-bold text-base uppercase">Coaching Emails</h2>
+                <p className="text-xs text-secondary mt-1">Receive your daily coaching report.</p>
+              </div>
             </div>
-            <div>
-              <h2 className="font-display font-bold text-base uppercase">Coaching Report Time</h2>
-              <p className="text-xs text-secondary mt-1">When Rocky analyzes your daily session.</p>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={settings.coaching_emails_enabled}
+                onChange={(e) => handleSettingChange('coaching_emails_enabled', e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
+
+          {settings.coaching_emails_enabled && (
+            <div className="mt-4 pt-4 border-t border-zinc-100">
+              <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Report Time</label>
+              <input 
+                type="time" 
+                value={settings.coaching_report_time}
+                onChange={(e) => handleSettingChange('coaching_report_time', e.target.value)}
+                className="block w-full max-w-full min-w-0 box-border bg-zinc-50 border border-zinc-200 rounded p-3 font-mono text-lg font-bold text-center outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              />
+              <p className="text-[10px] text-zinc-400 mt-2">
+                When Rocky sends your daily coaching report.
+              </p>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <input 
-              type="time" 
-              value={settings.coaching_report_time}
-              onChange={(e) => handleSettingChange('coaching_report_time', e.target.value)}
-              className="flex-1 bg-zinc-50 border border-zinc-200 rounded p-3 font-mono text-lg font-bold text-center outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-            />
-          </div>
+          )}
         </section>
 
         {/* Rest Timer */}

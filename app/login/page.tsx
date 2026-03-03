@@ -29,11 +29,11 @@ export default function Login() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Redirect based on onboarding status
+      // Hard redirect so auth cookie is definitely picked up by AuthProvider on next load
       if (data.onboardingComplete) {
-        router.push('/');
+        window.location.href = '/';
       } else {
-        router.push('/onboarding');
+        window.location.href = '/onboarding';
       }
     } catch (err: any) {
       setError(err.message);
@@ -90,7 +90,13 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="text-center text-secondary mt-6 font-body">
+        <p className="text-center text-secondary mt-4 font-body">
+          <Link href="/password-reset" className="text-primary font-medium hover:underline">
+            Forgot your password?
+          </Link>
+        </p>
+
+        <p className="text-center text-secondary mt-4 font-body">
           Don&apos;t have an account?{' '}
           <Link href="/signup" className="text-primary font-medium hover:underline">
             Sign up

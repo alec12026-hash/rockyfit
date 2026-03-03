@@ -1,5 +1,6 @@
 import { sql } from '@vercel/postgres';
 import { NextRequest, NextResponse } from 'next/server';
+import { getTrainingDayKeys } from '@/lib/training-schedule';
 
 type SourceItem = { title: string; url?: string; snippet: string };
 
@@ -12,7 +13,8 @@ async function fetchResearchSnippets(profile: any, customQuery?: string): Promis
   const queries = customQuery ? [customQuery] : [
     `${goal} resistance training ${experience} lifter science pubmed research`,
     `optimal volume frequency ${goal} hypertrophy evidence based systematic review`,
-    `${priorityMuscle} muscle growth exercise selection research`
+    `${priorityMuscle} muscle growth exercise selection research`,
+    `resistance training weekly frequency session spacing recovery performance evidence`
   ];
 
   const snippets: string[] = [];
@@ -71,7 +73,17 @@ function generateFallbackProgram(profile: any, customDays?: any[]): any {
     { dayNumber: 3, name: 'Full Body C', muscleGroups: ['chest', 'back', 'legs', 'shoulders', 'arms'], exercises: [] }
   ];
   
-  return { programName, weeks: 8, daysPerWeek, goal, days, progressionScheme: 'Linear progression', recoveryNotes: 'Ensure 48hrs between sessions' };
+  return {
+    programName,
+    weeks: 8,
+    daysPerWeek,
+    trainingDays: getTrainingDayKeys(daysPerWeek),
+    scheduleRationale: 'Training days are spread across the week to preserve recovery between hard sessions.',
+    goal,
+    days,
+    progressionScheme: 'Linear progression',
+    recoveryNotes: 'Ensure 48hrs between sessions'
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -143,6 +155,8 @@ Generate a complete workout program with this exact JSON structure (ONLY valid J
   "programName": "string - descriptive name",
   "weeks": number,
   "daysPerWeek": number,
+  "trainingDays": ["mon","wed","fri"],
+  "scheduleRationale": "string - why these days are spread this way",
   "goal": "string",
   "focus": "string",
   "progressionScheme": "string",
@@ -164,7 +178,9 @@ Generate a complete workout program with this exact JSON structure (ONLY valid J
       ]
     }
   ]
-}`;
+}
+
+Scheduling requirement: spread sessions across the week to preserve recovery quality (example defaults: 2 days Mon/Thu, 3 days Mon/Wed/Fri, 4 days Mon/Tue/Thu/Sat unless user explicitly requested specific days).`;
 
     let programData = null;
     try {
@@ -177,6 +193,12 @@ Generate a complete workout program with this exact JSON structure (ONLY valid J
       console.error('Program parse failed, using fallback:', e);
       programData = generateFallbackProgram(profile, custom_days);
     }
+
+    const requestedFrequency = Number(profile.workout_frequency) || Number(programData.daysPerWeek) || 3;
+    programData.trainingDays = Array.isArray(programData.trainingDays) && programData.trainingDays.length > 0
+      ? programData.trainingDays
+      : getTrainingDayKeys(requestedFrequency);
+    programData.scheduleRationale = programData.scheduleRationale || 'Training days are distributed to preserve recovery and maintain better performance on each session.';
 
     programData.sourcesUsed = sourcesUsed.slice(0, 5);
     programData.researchSummary = `Program built from evidence-based training principles. ${custom_split_request ? 'Customized based on your split preference request.' : ''}`;

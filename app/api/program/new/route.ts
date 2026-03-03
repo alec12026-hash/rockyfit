@@ -1,5 +1,6 @@
 import { sql } from '@vercel/postgres';
 import { NextRequest, NextResponse } from 'next/server';
+import { getTrainingDayKeys } from '@/lib/training-schedule';
 
 type SourceItem = { title: string; url?: string; snippet: string };
 
@@ -18,7 +19,8 @@ async function fetchResearchSnippets(profile: any): Promise<{ context: string; s
   const queries = [
     `${goal} resistance training ${experience} lifter science pubmed research`,
     `optimal volume frequency ${goal} hypertrophy evidence based systematic review`,
-    `${priorityMuscle} muscle growth exercise selection research`
+    `${priorityMuscle} muscle growth exercise selection research`,
+    `resistance training weekly frequency session spacing recovery performance evidence`
   ];
 
   const snippets: string[] = [];
@@ -114,6 +116,8 @@ function generateFallbackProgram(profile: any): any {
     researchSummary: 'Built from evidence-based training principles with emphasis on progressive overload, appropriate weekly volume, and movement selection matched to your goal and recovery profile.',
     weeks: experience === 'beginner' ? 8 : experience === 'intermediate' ? 10 : 12,
     daysPerWeek,
+    trainingDays: getTrainingDayKeys(daysPerWeek),
+    scheduleRationale: 'Training days are distributed across the week to improve recovery and session quality instead of clustering early-week sessions.',
     goal: goalLabels[goal] || 'General Fitness',
     focus: focus,
     progressionScheme: experience === 'beginner' 
@@ -310,7 +314,7 @@ export async function POST(req: NextRequest) {
       console.error('Failed to fetch research snippets:', e);
     }
 
-    const prompt = 'Generate a personalized workout program based on the following user profile:\n\n- Experience Level: ' + (userProfile.experience_level || 'not specified') + '\n- Training Frequency: ' + (userProfile.workout_frequency || 3) + ' days per week\n- Primary Goal: ' + (userProfile.goal || 'general_fitness') + '\n- Equipment Available: ' + (userProfile.equipment || 'gym') + '\n- Injuries/Limitations: ' + (userProfile.injuries || 'none') + '\n- Age: ' + (userProfile.age || 'not specified') + '\n- Biological Sex: ' + (userProfile.biological_sex || 'not specified') + '\n- Body Weight: ' + (userProfile.body_weight || 'not specified') + ' lbs\n- Primary Focus Area: ' + (userProfile.primary_focus || 'overall balanced') + '\n- Session Duration: ' + (userProfile.session_duration || 60) + ' minutes\n- Sleep Quality: ' + (userProfile.sleep_quality || 'average') + '\n- Stress Level: ' + (userProfile.stress_level || 'moderate') + researchSection + 'Generate a complete workout program with the following JSON structure (respond ONLY with valid JSON, no markdown):\n\n{\n  "programName": "string - descriptive program name with duration",\n  "weeks": number,\n  "daysPerWeek": number,\n  "goal": "string",\n  "focus": "string",\n  "progressionScheme": "string - how to progress over time",\n  "recoveryNotes": "string - recovery recommendations based on sleep and stress",\n  "days": [\n    {\n      "dayNumber": 1,\n      "name": "string (e.g., Push Day A)",\n      "muscleGroups": ["array of muscle groups"],\n      "scienceRationale": "string (1 sentence explaining why this day is structured this way)",\n      "exercises": [\n        {\n          "name": "string",\n          "sets": number,\n          "reps": "string (e.g., 8-12 or 5)",\n          "rest": "string (e.g., 90 sec or 2 min)",\n          "rationale": "string (1 sentence why this exercise)"\n        }\n      ]\n    }\n  ]\n}\n\nRequirements:\n- For beginners: compound movements, lower frequency per muscle, simpler progressions\n- For intermediate: push/pull/legs or upper/lower split, moderate volume\n- For advanced: higher frequency, advanced techniques noted\n- Match days per week to their training frequency\n- Include 5-7 exercises per training day\n- Consider injuries when selecting exercises\n- Adjust volume based on session duration\n- Account for sleep quality and stress in recovery recommendations\n- Incorporate the scientific research principles mentioned above into your programming decisions';
+    const prompt = 'Generate a personalized workout program based on the following user profile:\n\n- Experience Level: ' + (userProfile.experience_level || 'not specified') + '\n- Training Frequency: ' + (userProfile.workout_frequency || 3) + ' days per week\n- Primary Goal: ' + (userProfile.goal || 'general_fitness') + '\n- Equipment Available: ' + (userProfile.equipment || 'gym') + '\n- Injuries/Limitations: ' + (userProfile.injuries || 'none') + '\n- Age: ' + (userProfile.age || 'not specified') + '\n- Biological Sex: ' + (userProfile.biological_sex || 'not specified') + '\n- Body Weight: ' + (userProfile.body_weight || 'not specified') + ' lbs\n- Primary Focus Area: ' + (userProfile.primary_focus || 'overall balanced') + '\n- Session Duration: ' + (userProfile.session_duration || 60) + ' minutes\n- Sleep Quality: ' + (userProfile.sleep_quality || 'average') + '\n- Stress Level: ' + (userProfile.stress_level || 'moderate') + '\n- Scheduling requirement: spread weekly sessions across the week for better recovery (do not cluster low-frequency plans on consecutive early-week days)' + researchSection + 'Generate a complete workout program with the following JSON structure (respond ONLY with valid JSON, no markdown):\n\n{\n  "programName": "string - descriptive program name with duration",\n  "weeks": number,\n  "daysPerWeek": number,\n  "trainingDays": ["mon","wed","fri"],\n  "scheduleRationale": "string - why these days are spread this way",\n  "goal": "string",\n  "focus": "string",\n  "progressionScheme": "string - how to progress over time",\n  "recoveryNotes": "string - recovery recommendations based on sleep and stress",\n  "days": [\n    {\n      "dayNumber": 1,\n      "name": "string (e.g., Push Day A)",\n      "muscleGroups": ["array of muscle groups"],\n      "scienceRationale": "string (1 sentence explaining why this day is structured this way)",\n      "exercises": [\n        {\n          "name": "string",\n          "sets": number,\n          "reps": "string (e.g., 8-12 or 5)",\n          "rest": "string (e.g., 90 sec or 2 min)",\n          "rationale": "string (1 sentence why this exercise)"\n        }\n      ]\n    }\n  ]\n}\n\nRequirements:\n- For beginners: compound movements, lower frequency per muscle, simpler progressions\n- For intermediate: push/pull/legs or upper/lower split, moderate volume\n- For advanced: higher frequency, advanced techniques noted\n- Match days per week to their training frequency\n- Include 5-7 exercises per training day\n- Consider injuries when selecting exercises\n- Adjust volume based on session duration\n- Account for sleep quality and stress in recovery recommendations\n- IMPORTANT: distribute trainingDays to allow recovery gaps when possible (e.g., 2 days = Mon/Thu, 3 days = Mon/Wed/Fri, 4 days = Mon/Tue/Thu/Sat)\n- Incorporate the scientific research principles mentioned above into your programming decisions';
 
     let programData = null;
     const aiResponse = await callMinimax(prompt);
@@ -333,6 +337,12 @@ export async function POST(req: NextRequest) {
       console.log('Using fallback program generator');
       programData = generateFallbackProgram(userProfile);
     }
+
+    programData.trainingDays = Array.isArray(programData.trainingDays) && programData.trainingDays.length > 0
+      ? programData.trainingDays
+      : getTrainingDayKeys(programData.daysPerWeek || userProfile.workout_frequency || 3);
+
+    programData.scheduleRationale = programData.scheduleRationale || 'Training days are distributed across the week to improve recovery and session quality.';
 
     const orchestration = await orchestrateResearchNarrativeWithOpenAI({
       profile: userProfile,

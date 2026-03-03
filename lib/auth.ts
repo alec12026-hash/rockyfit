@@ -2,21 +2,20 @@ import { cookies } from 'next/headers';
 
 /**
  * Get current user ID from cookie.
- * Returns 1 (Alec's ID) for backward compatibility if no cookie exists.
- * Returns null if explicitly logged out or invalid.
+ * Returns the user ID from cookie, or throws if not logged in.
+ * All protected routes must require authentication.
  */
 export async function getUserId(): Promise<number> {
   const cookieStore = await cookies();
   const userCookie = cookieStore.get('rockyfit_user');
   
   if (!userCookie || !userCookie.value) {
-    // Backward compatibility: default to Alec (user_id = 1)
-    return 1;
+    throw new Error('NOT_AUTHENTICATED');
   }
   
   const userId = parseInt(userCookie.value, 10);
   if (isNaN(userId) || userId < 1) {
-    return 1;
+    throw new Error('INVALID_USER_ID');
   }
   
   return userId;
@@ -25,7 +24,7 @@ export async function getUserId(): Promise<number> {
 /**
  * Get user ID from request headers (for server-side API routes).
  * Falls back to cookie if not in headers.
- * Defaults to 1 for backward compatibility.
+ * @throws Error if not authenticated
  */
 export function getUserIdFromRequest(request: Request): number {
   // First try header (set by middleware)
@@ -49,8 +48,8 @@ export function getUserIdFromRequest(request: Request): number {
     }
   }
   
-  // Backward compatibility: default to Alec (user_id = 1)
-  return 1;
+  // Not authenticated - throw
+  throw new Error('NOT_AUTHENTICATED');
 }
 
 /**

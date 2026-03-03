@@ -4,7 +4,10 @@ import { getUserIdFromRequest } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
+    // Force dynamic - don't cache settings
     const userId = getUserIdFromRequest(request);
+    
+    console.log('[settings GET] userId:', userId);
     
     // Ensure table exists just in case migration hasn't run
     await sql`
@@ -29,8 +32,9 @@ export async function GET(request: Request) {
 
 export async function POST(req: Request) {
   try {
-    const userId = getUserIdFromRequest(req);
     const { key, value } = await req.json();
+    const userId = getUserIdFromRequest(req);
+    console.log('[settings POST] userId:', userId, 'key:', key, 'value:', value);
     if (!key || value === undefined) {
       return NextResponse.json({ error: 'Missing key or value' }, { status: 400 });
     }

@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getLatestReadiness } from '@/lib/db';
+import { getUserIdFromRequest } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const latest = await getLatestReadiness();
+    const userId = getUserIdFromRequest(request);
+    const latest = await getLatestReadiness(userId);
+    
     if (!latest) {
       return NextResponse.json({
         summary: 'No health data yet. Upload morning metrics and today\'s workout to get coaching.'

@@ -172,11 +172,12 @@ export async function saveHealthWorkout(payload: {
   `;
 }
 
-export async function getLatestReadiness() {
+export async function getLatestReadiness(userId: number = 1) {
   if (!hasDb) return null;
   const { rows } = await sql`
     SELECT source_date, readiness_score, readiness_zone, sleep_hours, resting_hr, hrv, steps, weight_kg
     FROM health_daily
+    WHERE user_id = ${userId}
     ORDER BY source_date DESC
     LIMIT 1
   `;

@@ -2,6 +2,7 @@
 
 import { X } from 'lucide-react';
 import { EXERCISE_INFO } from '@/lib/exerciseInfo';
+import MuscleAnatomyView, { MUSCLE_LABELS, MuscleGroup } from '@/app/components/MuscleAnatomyView';
 
 interface ExerciseInfoSheetProps {
   exerciseId: string | null;
@@ -20,6 +21,8 @@ export default function ExerciseInfoSheet({ exerciseId, onClose }: ExerciseInfoS
 
   // Format exercise name for display
   const displayName = exerciseId.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+  const { primary, secondary } = exerciseData.muscles;
 
   return (
     <>
@@ -53,18 +56,56 @@ export default function ExerciseInfoSheet({ exerciseId, onClose }: ExerciseInfoS
 
           {/* Content */}
           <div className="overflow-y-auto p-4 flex-1">
-            {/* GIF */}
-            <div className="bg-zinc-100 rounded-md overflow-hidden mb-4 border border-zinc-200">
-              <img 
-                src={exerciseData.gifUrl} 
-                alt={`${displayName} demonstration`}
-                className="w-full h-48 object-contain bg-zinc-50"
+            {/* Muscle Anatomy View */}
+            <div className="mb-4">
+              <MuscleAnatomyView 
+                primary={primary} 
+                secondary={secondary} 
               />
             </div>
 
+            {/* Primary Muscles */}
+            <div className="mb-3">
+              <span className="font-display font-bold text-[10px] uppercase tracking-wider text-secondary mr-2">
+                Primary:
+              </span>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {primary.map((muscle) => (
+                  <span 
+                    key={muscle}
+                    className="px-2 py-1 bg-[#DFFF00] text-zinc-900 text-xs font-body font-medium rounded-sm"
+                  >
+                    {MUSCLE_LABELS[muscle]}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Secondary Muscles */}
+            {secondary.length > 0 && (
+              <div className="mb-4">
+                <span className="font-display font-bold text-[10px] uppercase tracking-wider text-secondary mr-2">
+                  Secondary:
+                </span>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {secondary.map((muscle) => (
+                    <span 
+                      key={muscle}
+                      className="px-2 py-1 bg-zinc-100 text-zinc-600 text-xs font-body font-medium rounded-sm"
+                    >
+                      {MUSCLE_LABELS[muscle]}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Divider */}
+            <hr className="border-zinc-200 my-4" />
+
             {/* Form Tips */}
             <div>
-              <h3 className="font-display font-bold text-xs uppercase tracking-wider text-secondary mb-3">
+              <h3 className="font-display font-bold text-xs uppercase tracking-wider text-zinc-500 mb-3">
                 Form Tips
               </h3>
               <ul className="space-y-2">

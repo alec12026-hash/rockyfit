@@ -1,59 +1,8 @@
 import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '@/lib/auth';
-import { WEEKS, type Week, type WorkoutDay, type Exercise } from '@/lib/program';
-
-// Helper to convert generated program data to WEEKS format
-function convertToWeeksFormat(programData: any): Week[] {
-  const weeksCount = programData.weeks || 4;
-  const daysPerWeek = programData.daysPerWeek || 3;
-  const days = programData.days || [];
-
-  // Build the week structure by repeating days
-  const weeks: Week[] = [];
-  
-  for (let w = 0; w < weeksCount; w++) {
-    const weekDays: WorkoutDay[] = [];
-    
-    for (let d = 0; d < daysPerWeek; d++) {
-      const dayData = days[d % days.length];
-      if (!dayData) continue;
-      
-      const exercises: Exercise[] = (dayData.exercises || []).map((ex: any, idx: number) => ({
-        id: `w${w + 1}_d${d}_${ex.name.toLowerCase().replace(/ /g, '_')}_${idx}`,
-        name: ex.name,
-        sets: ex.sets,
-        reps: ex.reps,
-        rest: ex.rest,
-        rpe: ex.rpe,
-        notes: ex.rationale
-      }));
-      
-      weekDays.push({
-        id: `w${w + 1}_d${d}`,
-        title: dayData.name || `Day ${d + 1}`,
-        focus: (dayData.muscleGroups || []).join(', '),
-        exercises
-      });
-    }
-    
-    // Add rest day
-    weekDays.push({
-      id: `w${w + 1}_rest`,
-      title: 'Rest',
-      focus: 'Recovery',
-      exercises: []
-    });
-    
-    weeks.push({
-      id: `week_${w + 1}`,
-      number: w + 1,
-      days: weekDays
-    });
-  }
-  
-  return weeks;
-}
+import { WEEKS } from '@/lib/program';
+import { buildWeeksFromProgram } from '@/lib/training-schedule';
 
 // GET /api/program/structure - Get program structure in WEEKS format
 export async function GET(request: Request) {
@@ -86,7 +35,7 @@ export async function GET(request: Request) {
     }
 
     const programData = rows[0].program_data;
-    const weeks = convertToWeeksFormat(programData);
+    const weeks = buildWeeksFromProgram(programData);
     
     return NextResponse.json({
       useDefault: false,

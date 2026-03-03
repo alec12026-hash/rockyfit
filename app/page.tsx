@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { WEEKS } from '@/lib/program';
+import { buildWeeksFromProgram } from '@/lib/training-schedule';
 import { ArrowRight, TrendingUp, TrendingDown, Brain, Calendar, Activity } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -100,44 +101,8 @@ export default function Home() {
       .then(data => {
         setProgramData(data);
         if (!data.useDefault && data.programData) {
-          // Convert user's program to weeks format
-          const weeksCount = data.programData.weeks || 4;
-          const daysPerWeek = data.programData.daysPerWeek || 3;
-          const days = data.programData.days || [];
-          
-          const convertedWeeks: WeekData[] = [];
-          
-          for (let w = 0; w < Math.min(weeksCount, 4); w++) {
-            const weekDays = [];
-            
-            for (let d = 0; d < daysPerWeek; d++) {
-              const dayData = days[d % days.length];
-              if (!dayData) continue;
-              
-              weekDays.push({
-                id: `w${w + 1}_d${d}`,
-                title: dayData.name || `Day ${d + 1}`,
-                focus: (dayData.muscleGroups || []).join(', '),
-                exercises: dayData.exercises || []
-              });
-            }
-            
-            // Add rest day
-            weekDays.push({
-              id: `w${w + 1}_rest`,
-              title: 'Rest',
-              focus: 'Recovery',
-              exercises: []
-            });
-            
-            convertedWeeks.push({
-              id: `week_${w + 1}`,
-              number: w + 1,
-              days: weekDays
-            });
-          }
-          
-          setProgramWeeks(convertedWeeks);
+          const convertedWeeks: WeekData[] = buildWeeksFromProgram(data.programData, 4);
+          if (convertedWeeks.length > 0) setProgramWeeks(convertedWeeks);
         }
       })
       .catch(console.error);
@@ -201,6 +166,16 @@ export default function Home() {
           <Brain size={16} className="text-white" />
         </div>
       </header>
+
+      {/* Daily Check-in Nudge - shown when no readiness data */}
+      {!loading && !coachData?.readiness && (
+        <section className="mb-4 border border-zinc-200 bg-zinc-50 rounded-md p-3">
+          <Link href="/check-in" className="flex items-center justify-between text-sm hover:text-primary transition-colors">
+            <span className="text-secondary">No check-in yet today →</span>
+            <span className="font-medium text-primary">Log how you're feeling</span>
+          </Link>
+        </section>
+      )}
 
       {/* AI Coach Section */}
       <section className="mb-6 bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-md p-4 text-white shadow-lg">

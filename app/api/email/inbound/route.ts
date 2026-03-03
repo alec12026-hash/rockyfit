@@ -145,33 +145,45 @@ async function regenerateUserProgram(userId: number, splitRequest: string, custo
   }
 }
 
+function detectProgramSpecsFromEmail(text: string): { wanted: boolean; split_request?: string; custom_days?: any[] } {
+  const s = text.toLowerCase();
+  const dayMap: Record<string, number> = {
+    monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 7,
+    mon: 1, tue: 2, tues: 2, wed: 3, thu: 4, thur: 4, fri: 5, sat: 6, sun: 7
+  };
+
+  const matched = Object.keys(dayMap).filter((d) => new RegExp(`\\b${d}\\b`, 'i').test(s));
+  const uniqueDays = [...new Set(matched.map((d) => dayMap[d]))].sort((a, b) => a - b);
+
+  const hasGoalFatLoss = /lose\s+fat|fat\s+loss|cut/.test(s);
+  const hasGym = /full\s+gym|gym\s+access|have\s+a\s+gym/.test(s);
+  const noInjuries = /no\s+injur|none\b/.test(s);
+
+  if (!uniqueDays.length && !hasGoalFatLoss && !hasGym && !noInjuries) return { wanted: false };
+
+  const dayNames = uniqueDays.map((n) => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][n - 1]);
+  const splitRequest = `Create or update the user's program with these confirmed specs from email: training days ${dayNames.join(', ') || 'as profile default'}, goal ${hasGoalFatLoss ? 'fat loss' : 'as profile'}, equipment ${hasGym ? 'full gym' : 'as profile'}, injuries ${noInjuries ? 'none' : 'as profile'}, and keep sessions efficient for a busy after-work schedule.`;
+
+  const custom_days = uniqueDays.map((n, i) => ({
+    dayNumber: i + 1,
+    name: `Training Day ${i + 1} (${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][n - 1]})`,
+    muscleGroups: ['full body', 'fat loss']
+  }));
+
+  return { wanted: true, split_request: splitRequest, custom_days };
+}
+
 async function maybeApplyProgramAdjustment(userId: number, text: string): Promise<string | null> {
   const s = text.toLowerCase();
   const wantsDeload = s.includes('too sore') || s.includes('run down') || s.includes('fatigued') || s.includes('deload');
   if (!wantsDeload) return null;
 
-  const { rows } = await sql`
-    SELECT id, program_data FROM user_programs
-    WHERE user_id = ${userId} AND is_active = TRUE
-    ORDER BY created_at DESC
-    LIMIT 1
-  `;
-  if (!rows.length) return null;
-
-  const row = rows[0];
-  const program = row.program_data as any;
-  if (!program?.days) return null;
-
-  for (const d of program.days) {
-    if (!Array.isArray(d.exercises)) continue;
-    for (const ex of d.exercises) {
-      if (typeof ex.sets === 'number' && ex.sets > 1) ex.sets = Math.max(1, ex.sets - 1);
-    }
-  }
-  program.recoveryNotes = (program.recoveryNotes || '') + ' | Auto-adjusted: temporary deload (-1 set each exercise) based on user feedback.';
-
-  await sql`UPDATE user_programs SET program_data = ${JSON.stringify(program)} WHERE id = ${row.id}`;
-  return 'I applied a temporary deload to your active program (reduced each exercise by 1 set) based on your recovery feedback.';
+  // Any program change must run through research-backed regenerate flow.
+  return regenerateUserProgram(
+    userId,
+    'Apply a temporary deload version of the current program due to recovery fatigue. Keep structure similar but reduce volume/intensity based on evidence-based deload principles.',
+    []
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -226,12 +238,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, classification: 'out_of_scope' });
     }
 
-    // Check for program change request
+    // Check for program change request or concrete spec updates from user replies
     const programChange = detectProgramChangeRequest(message);
+    const specUpdate = detectProgramSpecsFromEmail(message);
     let programChangeNote = null;
+
     if (programChange.wanted) {
       console.log('Detected program change request:', programChange);
       programChangeNote = await regenerateUserProgram(user.id, programChange.split_request || '', programChange.custom_days || []);
+    } else if (specUpdate.wanted) {
+      console.log('Detected program spec update from email:', specUpdate);
+      programChangeNote = await regenerateUserProgram(user.id, specUpdate.split_request || '', specUpdate.custom_days || []);
     }
 
     const adjustmentNote = await maybeApplyProgramAdjustment(user.id, message);

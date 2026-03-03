@@ -1,11 +1,19 @@
+import { MuscleGroup } from '@/app/components/MuscleAnatomyView';
+
 export interface ExerciseInfo {
-  gifUrl: string;
+  muscles: {
+    primary: MuscleGroup[];
+    secondary: MuscleGroup[];
+  };
   tips: string[];
 }
 
 export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
   bench_press: {
-    gifUrl: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif',
+    muscles: {
+      primary: ['chest', 'triceps', 'front_delts'],
+      secondary: ['side_delts'],
+    },
     tips: [
       'Retract and depress your shoulder blades — "bend the bar" cue',
       'Drive your feet into the floor throughout the lift',
@@ -15,7 +23,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   deadlift: {
-    gifUrl: 'https://media.giphy.com/media/1qfDU4MJv9xoGLqrjC/giphy.gif',
+    muscles: {
+      primary: ['lower_back', 'glutes', 'hamstrings'],
+      secondary: ['traps', 'lats', 'quads', 'forearms'],
+    },
     tips: [
       'Hinge at the hips, not the knees — think "push the floor away"',
       'Keep the barbell close to your body throughout the lift',
@@ -25,7 +36,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   squat: {
-    gifUrl: 'https://media.giphy.com/media/1qfKN8Dt0CRdCRxz9q/giphy.gif',
+    muscles: {
+      primary: ['quads', 'glutes'],
+      secondary: ['hamstrings', 'lower_back', 'calves'],
+    },
     tips: [
       'Brace your core like you\'re about to get punched',
       'Push your knees out in line with your toes',
@@ -35,7 +49,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   hack_squat: {
-    gifUrl: 'https://media.giphy.com/media/xT8qBvgKeMvMGSWCHU/giphy.gif',
+    muscles: {
+      primary: ['quads'],
+      secondary: ['glutes', 'calves'],
+    },
     tips: [
       'Position feet shoulder-width or slightly wider',
       'Keep your back flat against the pad',
@@ -45,7 +62,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   meadows_row: {
-    gifUrl: 'https://media.giphy.com/media/l0HlHFRbmaZtBRhXG/giphy.gif',
+    muscles: {
+      primary: ['lats'],
+      secondary: ['rear_delts', 'biceps', 'forearms'],
+    },
     tips: [
       'Lean into the weight for a full stretch',
       'Keep your back flat, slight hip hinge',
@@ -55,7 +75,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   larson_press: {
-    gifUrl: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif',
+    muscles: {
+      primary: ['chest', 'triceps'],
+      secondary: ['front_delts'],
+    },
     tips: [
       'Lower the handles to your chest with control',
       'Keep your elbows at a 45° angle to your body',
@@ -65,7 +88,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   incline_smith: {
-    gifUrl: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif',
+    muscles: {
+      primary: ['chest', 'front_delts'],
+      secondary: ['triceps'],
+    },
     tips: [
       'Set bench to 30-45° incline',
       'Lower the bar to upper chest, not neck or stomach',
@@ -75,7 +101,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   egyptian_raise: {
-    gifUrl: 'https://media.giphy.com/media/l0HlHFRbmaZtBRhXG/giphy.gif',
+    muscles: {
+      primary: ['side_delts'],
+      secondary: ['rear_delts', 'traps'],
+    },
     tips: [
       'Lean slightly forward from the hips',
       'Raise arms out to sides in a "Y" pattern',
@@ -85,7 +114,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   skull_crusher: {
-    gifUrl: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif',
+    muscles: {
+      primary: ['triceps'],
+      secondary: ['front_delts'],
+    },
     tips: [
       'Keep elbows pointed at the ceiling, not out to sides',
       'Lower the weight to your forehead, not behind your head',
@@ -95,7 +127,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   jm_press: {
-    gifUrl: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif',
+    muscles: {
+      primary: ['triceps', 'chest'],
+      secondary: ['front_delts'],
+    },
     tips: [
       'Think "pressing" not "crushing" — horizontal bar path',
       'Lower bar to chest with elbows tucked',
@@ -105,7 +140,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   dips: {
-    gifUrl: 'https://media.giphy.com/media/xT8qBvgKeMvMGSWCHU/giphy.gif',
+    muscles: {
+      primary: ['chest', 'triceps'],
+      secondary: ['front_delts', 'side_delts'],
+    },
     tips: [
       'Lean forward slightly to target chest more',
       'Stay upright to target triceps more',
@@ -115,7 +153,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   pullup_neutral: {
-    gifUrl: 'https://media.giphy.com/media/l0HlHFRbmaZtBRhXG/giphy.gif',
+    muscles: {
+      primary: ['lats', 'biceps'],
+      secondary: ['rear_delts', 'lower_back'],
+    },
     tips: [
       'Engage your lats before pulling — "pack the shoulders"',
       'Pull your chin over the bar, not chest',
@@ -125,7 +166,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   straight_arm: {
-    gifUrl: 'https://media.giphy.com/media/l0HlHFRbmaZtBRhXG/giphy.gif',
+    muscles: {
+      primary: ['lats'],
+      secondary: ['abs', 'triceps'],
+    },
     tips: [
       'Keep arms straight throughout — no bending',
       'Pull from the elbows, not the hands',
@@ -135,7 +179,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   rear_delt_fly: {
-    gifUrl: 'https://media.giphy.com/media/l0HlHFRbmaZtBRhXG/giphy.gif',
+    muscles: {
+      primary: ['rear_delts'],
+      secondary: ['traps', 'upper_back'],
+    },
     tips: [
       'Bend over until torso is nearly parallel to floor',
       'Keep a slight bend in your elbows throughout',
@@ -145,7 +192,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   bayesian_curl: {
-    gifUrl: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif',
+    muscles: {
+      primary: ['biceps'],
+      secondary: ['front_delts'],
+    },
     tips: [
       'Keep elbows at your sides throughout',
       'Curl the weight up, not out',
@@ -155,7 +205,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   waiter_curl: {
-    gifUrl: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif',
+    muscles: {
+      primary: ['biceps'],
+      secondary: ['forearms'],
+    },
     tips: [
       'Hold the dumbbell vertically by the handle end',
       'Keep your elbow pinned to your side',
@@ -165,7 +218,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   bulgarian: {
-    gifUrl: 'https://media.giphy.com/media/1qfKN8Dt0CRdCRxz9q/giphy.gif',
+    muscles: {
+      primary: ['quads', 'glutes'],
+      secondary: ['hamstrings', 'calves'],
+    },
     tips: [
       'Position back foot on bench or step',
       'Keep front knee tracking over toes',
@@ -175,7 +231,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   sldl: {
-    gifUrl: 'https://media.giphy.com/media/1qfDU4MJv9xoGLqrjC/giphy.gif',
+    muscles: {
+      primary: ['hamstrings', 'glutes'],
+      secondary: ['lower_back', 'calves'],
+    },
     tips: [
       'Hinge at hips, slight knee bend',
       'Keep back flat, chest up',
@@ -185,7 +244,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   seated_ham: {
-    gifUrl: 'https://media.giphy.com/media/1qfDU4MJv9xoGLqrjC/giphy.gif',
+    muscles: {
+      primary: ['hamstrings'],
+      secondary: ['lower_back', 'glutes'],
+    },
     tips: [
       'Sit on edge of bench with legs extended',
       'Hinge forward at hips, not round your back',
@@ -195,7 +257,10 @@ export const EXERCISE_INFO: Record<string, ExerciseInfo> = {
     ],
   },
   donkey_calf: {
-    gifUrl: 'https://media.giphy.com/media/xT8qBvgKeMvMGSWCHU/giphy.gif',
+    muscles: {
+      primary: ['calves'],
+      secondary: ['lower_back'],
+    },
     tips: [
       'Bend at hips, keeping back flat',
       'Position feet hip-width apart',

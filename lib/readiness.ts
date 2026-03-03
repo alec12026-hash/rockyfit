@@ -3,6 +3,9 @@ export type HealthInput = {
   restingHr?: number | null;
   hrv?: number | null;
   steps?: number | null;
+  energyLevel?: number | null;
+  sorenessLevel?: number | null;
+  mood?: number | null;
 };
 
 export function calculateReadiness(input: HealthInput) {
@@ -31,6 +34,25 @@ export function calculateReadiness(input: HealthInput) {
   if (typeof input.steps === 'number') {
     if (input.steps >= 7000 && input.steps <= 13000) score += 8;
     else if (input.steps > 18000) score -= 4;
+  }
+
+  // Check-in subjective inputs (energy, soreness, mood are 1-5)
+  if (typeof input.energyLevel === 'number') {
+    if (input.energyLevel >= 4) score += 8;
+    else if (input.energyLevel === 3) score += 3;
+    else if (input.energyLevel <= 2) score -= 6;
+  }
+
+  if (typeof input.sorenessLevel === 'number') {
+    if (input.sorenessLevel <= 2) score += 5;
+    else if (input.sorenessLevel === 3) score += 0;
+    else if (input.sorenessLevel >= 4) score -= 6;
+  }
+
+  if (typeof input.mood === 'number') {
+    if (input.mood >= 4) score += 5;
+    else if (input.mood === 3) score += 0;
+    else if (input.mood <= 2) score -= 4;
   }
 
   score = Math.max(0, Math.min(100, Math.round(score)));

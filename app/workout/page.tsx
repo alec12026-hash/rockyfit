@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { WEEKS, type Week } from '@/lib/program';
+import { buildWeeksFromProgram } from '@/lib/training-schedule';
 import { ArrowLeft, ArrowRight, Dumbbell } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -24,51 +25,8 @@ export default function WorkoutIndexPage() {
         setProgramData(data);
         
         if (!data.useDefault && data.programData) {
-          // Convert user's program to weeks format
-          const weeksCount = data.programData.weeks || 4;
-          const daysPerWeek = data.programData.daysPerWeek || 3;
-          const days = data.programData.days || [];
-          
-          const convertedWeeks: Week[] = [];
-          
-          for (let w = 0; w < weeksCount; w++) {
-            const weekDays = [];
-            
-            for (let d = 0; d < daysPerWeek; d++) {
-              const dayData = days[d % days.length];
-              if (!dayData) continue;
-              
-              weekDays.push({
-                id: `w${w + 1}_d${d}`,
-                title: dayData.name || `Day ${d + 1}`,
-                focus: (dayData.muscleGroups || []).join(', '),
-                exercises: (dayData.exercises || []).map((ex: any, idx: number) => ({
-                  id: `w${w + 1}_d${d}_${ex.name.toLowerCase().replace(/ /g, '_')}_${idx}`,
-                  name: ex.name,
-                  sets: ex.sets,
-                  reps: ex.reps,
-                  rest: ex.rest,
-                  notes: ex.rationale
-                }))
-              });
-            }
-            
-            // Add rest day
-            weekDays.push({
-              id: `w${w + 1}_rest`,
-              title: 'Rest',
-              focus: 'Recovery',
-              exercises: []
-            });
-            
-            convertedWeeks.push({
-              id: `week_${w + 1}`,
-              number: w + 1,
-              days: weekDays
-            });
-          }
-          
-          setWeeks(convertedWeeks);
+          const convertedWeeks: Week[] = buildWeeksFromProgram(data.programData);
+          if (convertedWeeks.length > 0) setWeeks(convertedWeeks);
         }
       })
       .catch(console.error)
