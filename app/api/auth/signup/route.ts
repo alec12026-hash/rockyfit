@@ -42,6 +42,17 @@ export async function POST(req: Request) {
       maxAge: 60 * 60 * 24 * 30,
     });
 
+    // Trigger welcome email immediately after signup (non-blocking)
+    try {
+      const origin = new URL(req.url).origin;
+      fetch(`${origin}/api/email/welcome`, {
+        method: 'POST',
+        headers: { 'x-user-id': String(user.id) },
+      }).catch((e) => console.error('Welcome email trigger failed:', e));
+    } catch (e) {
+      console.error('Welcome email trigger setup failed:', e);
+    }
+
     return response;
   } catch (error: any) {
     console.error('Signup error:', error);

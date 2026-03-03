@@ -77,9 +77,14 @@ export async function POST(req: NextRequest) {
 
     const uid = parseInt(userId, 10);
 
+    await sql`
+      ALTER TABLE user_profiles
+      ADD COLUMN IF NOT EXISTS welcome_email_sent_at TIMESTAMP
+    `;
+
     // Get user email and name
     const { rows: [user] } = await sql`
-      SELECT u.email, u.name, p.onboarding_complete
+      SELECT u.email, u.name, p.onboarding_complete, p.welcome_email_sent_at
       FROM users u
       LEFT JOIN user_profiles p ON p.user_id = u.id
       WHERE u.id = ${uid}
@@ -91,6 +96,10 @@ export async function POST(req: NextRequest) {
 
     const userName = user.name || user.email.split('@')[0];
 
+    if (user.welcome_email_sent_at) {
+      return NextResponse.json({ success: true, message: 'Welcome email already sent' });
+    }
+
     // Send email via nodemailer
     await transporter.sendMail({
       from: `Coach Rocky <${GMAIL_EMAIL}>`,
@@ -98,6 +107,12 @@ export async function POST(req: NextRequest) {
       subject: "Welcome to RockyFit — I'm Coach Rocky",
       html: HTML_TEMPLATE(userName),
     });
+
+    await sql`
+      UPDATE user_profiles
+      SET welcome_email_sent_at = NOW()
+      WHERE user_id = ${uid}
+    `;
 
     return NextResponse.json({ success: true, message: 'Welcome email sent' });
   } catch (error: any) {
