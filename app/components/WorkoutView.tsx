@@ -6,7 +6,6 @@ import Link from 'next/link';
 import type { WorkoutDay } from '@/lib/program';
 import NumericKeypad from './NumericKeypad';
 import ExerciseInfoSheet from './ExerciseInfoSheet';
-import { EXERCISE_INFO } from '@/lib/exerciseInfo';
 
 // Mock alternates database
 const ALTERNATES: Record<string, string[]> = {
@@ -80,7 +79,7 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
   const [keypadState, setKeypadState] = useState<KeypadState>(null);
 
   // Exercise Info Sheet State
-  const [infoSheet, setInfoSheet] = useState<string | null>(null);
+  const [infoSheet, setInfoSheet] = useState<{ id: string; name: string } | null>(null);
 
   // Load history & settings on mount
   useEffect(() => {
@@ -408,14 +407,12 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
                           <Repeat size={14} />
                         </button>
                       )}
-                      {EXERCISE_INFO[ex.id] && (
-                        <button 
-                          onClick={() => setInfoSheet(ex.id)}
-                          className="p-1 text-zinc-300 hover:text-zinc-600 transition-colors"
-                        >
-                          <Info size={14} />
-                        </button>
-                      )}
+                      <button 
+                        onClick={() => setInfoSheet({ id: ex.id, name: ex.name })}
+                        className="p-1 text-zinc-300 hover:text-zinc-600 transition-colors"
+                      >
+                        <Info size={14} />
+                      </button>
                     </div>
                     {isSwapped && <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Swapped from {ex.name}</span>}
                   </div>
@@ -603,7 +600,8 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
 
       {/* Exercise Info Sheet */}
       <ExerciseInfoSheet 
-        exerciseId={infoSheet} 
+        exerciseId={infoSheet?.id || null}
+        exerciseName={infoSheet?.name}
         onClose={() => setInfoSheet(null)} 
       />
     </div>
