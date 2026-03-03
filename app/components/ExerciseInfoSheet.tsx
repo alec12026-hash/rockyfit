@@ -24,17 +24,11 @@ export default function ExerciseInfoSheet({ exerciseId, exerciseName, onClose }:
   const [videoFailed, setVideoFailed] = useState(false);
   const [remoteGifUrl, setRemoteGifUrl] = useState<string | null>(null);
 
-  useEffect(() => {
-    setVideoFailed(false);
-    setRemoteGifUrl(null);
-  }, [exerciseId, exerciseName]);
+  const safeExerciseId = exerciseId || '';
+  const exerciseData = safeExerciseId ? EXERCISE_INFO[safeExerciseId] : undefined;
+  const displayName = exerciseName || safeExerciseId.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
-  if (!exerciseId) return null;
-
-  const exerciseData = EXERCISE_INFO[exerciseId];
-  const displayName = exerciseName || exerciseId.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-
-  const fallbackSlug = useMemo(() => slugifyName(displayName), [displayName]);
+  const fallbackSlug = useMemo(() => slugifyName(displayName || 'exercise'), [displayName]);
   const localFallbackDemo = {
     src: `/exercise-demos/by-name/${fallbackSlug}.mp4`,
     poster: `/exercise-demos/by-name/${fallbackSlug}.jpg`,
@@ -44,7 +38,12 @@ export default function ExerciseInfoSheet({ exerciseId, exerciseName, onClose }:
   const hasMuscleData = Boolean(exerciseData?.muscles);
 
   useEffect(() => {
-    if (exerciseData || !exerciseName) return;
+    setVideoFailed(false);
+    setRemoteGifUrl(null);
+  }, [exerciseId, exerciseName]);
+
+  useEffect(() => {
+    if (!exerciseId || exerciseData || !exerciseName) return;
 
     let cancelled = false;
     (async () => {
@@ -62,7 +61,9 @@ export default function ExerciseInfoSheet({ exerciseId, exerciseName, onClose }:
     return () => {
       cancelled = true;
     };
-  }, [exerciseData, exerciseName]);
+  }, [exerciseId, exerciseData, exerciseName]);
+
+  if (!exerciseId) return null;
 
   return (
     <>
