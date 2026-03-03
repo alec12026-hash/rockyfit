@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PlayCircle, X } from 'lucide-react';
 import { EXERCISE_INFO } from '@/lib/exerciseInfo';
 import MuscleAnatomyView, { MUSCLE_LABELS } from '@/app/components/MuscleAnatomyView';
@@ -23,6 +23,8 @@ function slugifyName(name: string) {
 export default function ExerciseInfoSheet({ exerciseId, exerciseName, onClose }: ExerciseInfoSheetProps) {
   const [videoFailed, setVideoFailed] = useState(false);
   const [remoteGifUrl, setRemoteGifUrl] = useState<string | null>(null);
+  const [dragY, setDragY] = useState(0);
+  const dragStartY = useRef<number | null>(null);
 
   const safeExerciseId = exerciseId || '';
   const exerciseData = safeExerciseId ? EXERCISE_INFO[safeExerciseId] : undefined;
@@ -40,7 +42,26 @@ export default function ExerciseInfoSheet({ exerciseId, exerciseName, onClose }:
   useEffect(() => {
     setVideoFailed(false);
     setRemoteGifUrl(null);
+    setDragY(0);
   }, [exerciseId, exerciseName]);
+
+  const onDragStart = (clientY: number) => {
+    dragStartY.current = clientY;
+  };
+
+  const onDragMove = (clientY: number) => {
+    if (dragStartY.current == null) return;
+    const delta = clientY - dragStartY.current;
+    setDragY(Math.max(0, delta));
+  };
+
+  const onDragEnd = () => {
+    if (dragY > 110) {
+      onClose();
+    }
+    dragStartY.current = null;
+    setDragY(0);
+  };
 
   useEffect(() => {
     if (!exerciseId || exerciseData || !exerciseName) return;
@@ -70,9 +91,21 @@ export default function ExerciseInfoSheet({ exerciseId, exerciseName, onClose }:
       <div className="fixed inset-0 bg-black/50 z-50 animate-in fade-in duration-200" onClick={onClose} />
 
       <div className="fixed inset-x-0 bottom-0 top-[4vh] z-50 animate-in slide-in-from-bottom duration-300 ease-out">
-        <div className="bg-surface max-w-lg mx-auto rounded-t-lg shadow-2xl h-full overflow-hidden flex flex-col">
-          <div className="flex justify-center pt-3 pb-1">
-            <div className="w-10 h-1 bg-zinc-300 rounded-full" />
+        <div
+          className="bg-surface max-w-lg mx-auto rounded-t-lg shadow-2xl h-full overflow-hidden flex flex-col transition-transform duration-150"
+          style={{ transform: `translateY(${dragY}px)` }}
+        >
+          <div
+            className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing"
+            onMouseDown={(e) => onDragStart(e.clientY)}
+            onMouseMove={(e) => onDragMove(e.clientY)}
+            onMouseUp={onDragEnd}
+            onMouseLeave={onDragEnd}
+            onTouchStart={(e) => onDragStart(e.touches[0].clientY)}
+            onTouchMove={(e) => onDragMove(e.touches[0].clientY)}
+            onTouchEnd={onDragEnd}
+          >
+            <div className="w-12 h-1.5 bg-zinc-300 rounded-full" />
           </div>
 
           <div className="flex items-center justify-between px-4 pb-3 border-b border-zinc-200">
@@ -118,6 +151,20 @@ export default function ExerciseInfoSheet({ exerciseId, exerciseName, onClose }:
               </div>
             </div>
 
+            {exerciseData?.tips?.length ? (
+              <div>
+                <h3 className="font-display font-bold text-xs uppercase tracking-wider text-zinc-500 mb-3">Form Tips</h3>
+                <ul className="space-y-2">
+                  {exerciseData.tips.map((tip, index) => (
+                    <li key={index} className="flex gap-2 text-sm font-body text-primary">
+                      <span className="text-accent font-bold">•</span>
+                      <span>{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
             {hasMuscleData && (
               <>
                 <MuscleAnatomyView primary={exerciseData!.muscles.primary} secondary={exerciseData!.muscles.secondary} />
@@ -150,22 +197,6 @@ export default function ExerciseInfoSheet({ exerciseId, exerciseName, onClose }:
               </>
             )}
 
-            {exerciseData?.tips?.length ? (
-              <>
-                <hr className="border-zinc-200" />
-                <div>
-                  <h3 className="font-display font-bold text-xs uppercase tracking-wider text-zinc-500 mb-3">Form Tips</h3>
-                  <ul className="space-y-2">
-                    {exerciseData.tips.map((tip, index) => (
-                      <li key={index} className="flex gap-2 text-sm font-body text-primary">
-                        <span className="text-accent font-bold">•</span>
-                        <span>{tip}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </>
-            ) : null}
           </div>
         </div>
       </div>
