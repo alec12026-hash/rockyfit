@@ -49,7 +49,7 @@ export async function POST(request: Request) {
   try {
     const userId = getUserIdFromRequest(request);
     const body = await request.json();
-    const { workoutId, weekNum, dayNum, sets, notes, readinessBefore, rating } = body;
+    const { workoutId, weekNum, dayNum, sets, notes, readinessBefore, rating, startTime } = body;
 
     await ensureWorkoutSchema();
 
@@ -71,10 +71,18 @@ export async function POST(request: Request) {
       return acc + (set.weight_lbs || 0) * (set.reps || 0);
     }, 0);
 
+    // Calculate duration if startTime provided
+    let durationMinutes = null;
+    if (startTime) {
+      const start = new Date(startTime);
+      const end = new Date();
+      durationMinutes = Math.round((end.getTime() - start.getTime()) / 60000);
+    }
+
     // Insert workout session
     const sessionResult = await sql`
-      INSERT INTO workout_sessions (workout_id, week_num, day_num, total_volume, notes, readiness_before, rating, user_id)
-      VALUES (${workoutId}, ${Number(weekNum)}, ${Number(dayNum)}, ${totalVolume}, ${notes || null}, ${readinessBefore || null}, ${rating || null}, ${userId})
+      INSERT INTO workout_sessions (workout_id, week_num, day_num, total_volume, notes, readiness_before, rating, user_id, start_time, duration_minutes)
+      VALUES (${workoutId}, ${Number(weekNum)}, ${Number(dayNum)}, ${totalVolume}, ${notes || null}, ${readinessBefore || null}, ${rating || null}, ${userId}, ${startTime ? new Date(startTime) : null}, ${durationMinutes})
       RETURNING id
     `;
 
@@ -141,7 +149,7 @@ export async function GET(request: Request) {
       // Get history for specific exercise (user-specific)
       query = await sql`
         SELECT ws.id, ws.workout_id, ws.week_num, ws.day_num, ws.completed_at, ws.total_volume,
-               ws.rating, ws.notes
+               ws.rating, ws.notes, ws.duration_minutes
         FROM workout_sessions ws
         JOIN workout_sets wse ON wse.session_id = ws.id
         WHERE wse.exercise_id = ${exerciseId} AND ws.user_id = ${userId}
@@ -153,7 +161,7 @@ export async function GET(request: Request) {
       // Get recent workouts (user-specific)
       query = await sql`
         SELECT ws.id, ws.workout_id, ws.week_num, ws.day_num, ws.completed_at, ws.total_volume,
-               ws.rating, ws.notes
+               ws.rating, ws.notes, ws.duration_minutes
         FROM workout_sessions ws
         WHERE ws.user_id = ${userId}
         ORDER BY ws.completed_at DESC

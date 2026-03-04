@@ -71,6 +71,7 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
 
   // Form state for sets
   const [setData, setSetData] = useState<Record<string, { weight: string; reps: string; rpe: string }[]>>({});
+  const [workoutStartTime, setWorkoutStartTime] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveState, setSaveState] = useState<'idle' | 'saved' | 'analyzing'>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -238,6 +239,11 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
   };
 
   const handleSetChange = (exerciseId: string, setIdx: number, field: 'weight' | 'reps' | 'rpe', value: string) => {
+    // Track workout start time when user first enters data
+    if (!workoutStartTime && value) {
+      setWorkoutStartTime(new Date().toISOString());
+    }
+    
     setSetData(prev => {
       const exData = prev[exerciseId] || [];
       const newExData = [...exData];
@@ -337,7 +343,8 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
           dayNum,
           sets: setsToSave,
           readinessBefore: null,
-          rating: null
+          rating: null,
+          startTime: workoutStartTime
         })
       });
 
