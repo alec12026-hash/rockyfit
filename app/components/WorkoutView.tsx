@@ -122,24 +122,28 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
         if (!res.ok) throw new Error('Failed to fetch');
         const sessions = await res.json();
         
-        // Find the most recent session for this dayId
-        const lastSession = sessions.find((s: any) => s.workout_id === dayId);
+        // Build history map from ALL past sessions (not just matching dayId)
+        // Find the most recent occurrence of each exercise across all sessions
+        const historyMap: Record<string, { weight: number, reps: number }> = {};
         
-        if (lastSession && lastSession.sets) {
-          const historyMap: Record<string, { weight: number, reps: number }> = {};
+        for (const session of sessions) {
+          if (!session.sets) continue;
           
-          // Get max weight set per exercise from the last session
-          for (const set of lastSession.sets) {
+          for (const set of session.sets) {
             const exId = set.exercise_id;
-            if (!historyMap[exId] || set.weight_lbs > historyMap[exId].weight) {
+            if (!exId) continue;
+            
+            // Only record if this is the first time we've seen this exercise
+            // (sessions are already sorted by completed_at DESC)
+            if (!historyMap[exId]) {
               historyMap[exId] = { weight: set.weight_lbs, reps: set.reps };
             }
           }
-          
-          if (Object.keys(historyMap).length > 0) {
-            setHistory(historyMap);
-            return;
-          }
+        }
+        
+        if (Object.keys(historyMap).length > 0) {
+          setHistory(historyMap);
+          return;
         }
         
         // Fallback to mock if no data

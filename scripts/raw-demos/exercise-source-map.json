@@ -1,0 +1,142 @@
+{
+  "bench_press": {
+    "source_name": "Bench Press - Powerlifting",
+    "source_images": [
+      "Bench_Press_-_Powerlifting/0.jpg",
+      "Bench_Press_-_Powerlifting/1.jpg"
+    ]
+  },
+  "deadlift": {
+    "source_name": "Barbell Deadlift",
+    "source_images": [
+      "Barbell_Deadlift/0.jpg",
+      "Barbell_Deadlift/1.jpg"
+    ]
+  },
+  "squat": {
+    "source_name": "Barbell Squat",
+    "source_images": [
+      "Barbell_Squat/0.jpg",
+      "Barbell_Squat/1.jpg"
+    ]
+  },
+  "hack_squat": {
+    "source_name": "Hack Squat",
+    "source_images": [
+      "Hack_Squat/0.jpg",
+      "Hack_Squat/1.jpg"
+    ]
+  },
+  "meadows_row": {
+    "source_name": "One-Arm Dumbbell Row",
+    "source_images": [
+      "One-Arm_Dumbbell_Row/0.jpg",
+      "One-Arm_Dumbbell_Row/1.jpg"
+    ]
+  },
+  "larson_press": {
+    "source_name": "Barbell Bench Press - Medium Grip",
+    "source_images": [
+      "Barbell_Bench_Press_-_Medium_Grip/0.jpg",
+      "Barbell_Bench_Press_-_Medium_Grip/1.jpg"
+    ]
+  },
+  "incline_smith": {
+    "source_name": "Smith Machine Incline Bench Press",
+    "source_images": [
+      "Smith_Machine_Incline_Bench_Press/0.jpg",
+      "Smith_Machine_Incline_Bench_Press/1.jpg"
+    ]
+  },
+  "egyptian_raise": {
+    "source_name": "Side Lateral Raise",
+    "source_images": [
+      "Side_Lateral_Raise/0.jpg",
+      "Side_Lateral_Raise/1.jpg"
+    ]
+  },
+  "skull_crusher": {
+    "source_name": "EZ-Bar Skullcrusher",
+    "source_images": [
+      "EZ-Bar_Skullcrusher/0.jpg",
+      "EZ-Bar_Skullcrusher/1.jpg"
+    ]
+  },
+  "jm_press": {
+    "source_name": "JM Press",
+    "source_images": [
+      "JM_Press/0.jpg",
+      "JM_Press/1.jpg"
+    ]
+  },
+  "dips": {
+    "source_name": "Dips - Chest Version",
+    "source_images": [
+      "Dips_-_Chest_Version/0.jpg",
+      "Dips_-_Chest_Version/1.jpg"
+    ]
+  },
+  "pullup_neutral": {
+    "source_name": "V-Bar Pullup",
+    "source_images": [
+      "V-Bar_Pullup/0.jpg",
+      "V-Bar_Pullup/1.jpg"
+    ]
+  },
+  "straight_arm": {
+    "source_name": "Rope Straight-Arm Pulldown",
+    "source_images": [
+      "Rope_Straight-Arm_Pulldown/0.jpg",
+      "Rope_Straight-Arm_Pulldown/1.jpg"
+    ]
+  },
+  "rear_delt_fly": {
+    "source_name": "Cable Rear Delt Fly",
+    "source_images": [
+      "Cable_Rear_Delt_Fly/0.jpg",
+      "Cable_Rear_Delt_Fly/1.jpg"
+    ]
+  },
+  "bayesian_curl": {
+    "source_name": "Standing One-Arm Cable Curl",
+    "source_images": [
+      "Standing_One-Arm_Cable_Curl/0.jpg",
+      "Standing_One-Arm_Cable_Curl/1.jpg"
+    ]
+  },
+  "waiter_curl": {
+    "source_name": "Dumbbell Alternate Bicep Curl",
+    "source_images": [
+      "Dumbbell_Alternate_Bicep_Curl/0.jpg",
+      "Dumbbell_Alternate_Bicep_Curl/1.jpg"
+    ]
+  },
+  "bulgarian": {
+    "source_name": "Barbell Lunge",
+    "source_images": [
+      "Barbell_Lunge/0.jpg",
+      "Barbell_Lunge/1.jpg"
+    ]
+  },
+  "sldl": {
+    "source_name": "Stiff-Legged Barbell Deadlift",
+    "source_images": [
+      "Stiff-Legged_Barbell_Deadlift/0.jpg",
+      "Stiff-Legged_Barbell_Deadlift/1.jpg"
+    ]
+  },
+  "seated_ham": {
+    "source_name": "Seated Leg Curl",
+    "source_images": [
+      "Seated_Leg_Curl/0.jpg",
+      "Seated_Leg_Curl/1.jpg"
+    ]
+  },
+  "donkey_calf": {
+    "source_name": "Donkey Calf Raises",
+    "source_images": [
+      "Donkey_Calf_Raises/0.jpg",
+      "Donkey_Calf_Raises/1.jpg"
+    ]
+  }
+}
