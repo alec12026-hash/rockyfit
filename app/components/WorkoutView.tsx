@@ -69,9 +69,34 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
   const [currentTimerExercise, setCurrentTimerExercise] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Form state for sets
+  // Form state for sets - restore from localStorage if exists for this workout
   const [setData, setSetData] = useState<Record<string, { weight: string; reps: string; rpe: string }[]>>({});
   const [workoutStartTime, setWorkoutStartTime] = useState<string | null>(null);
+  
+  // Load persisted workout data from localStorage
+  useEffect(() => {
+    const savedData = localStorage.getItem(`rockyfit_workout_${dayId}`);
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        setSetData(parsed.data || {});
+        setWorkoutStartTime(parsed.startTime || null);
+      } catch (e) { console.error('Error loading workout data', e); }
+    }
+  }, [dayId]);
+
+  // Persist workout data to localStorage whenever it changes
+  useEffect(() => {
+    if (Object.keys(setData).length > 0) {
+      localStorage.setItem(`rockyfit_workout_${dayId}`, JSON.stringify({ data: setData, startTime: workoutStartTime }));
+    }
+  }, [setData, workoutStartTime, dayId]);
+
+  // Clear persisted data after successful save
+  const clearWorkoutData = () => {
+    localStorage.removeItem(`rockyfit_workout_${dayId}`);
+  };
+
   const [saving, setSaving] = useState(false);
   const [saveState, setSaveState] = useState<'idle' | 'saved' | 'analyzing'>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -352,6 +377,7 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
       const result = await res.json();
       if (res.ok && result.success) {
         setSaveState('saved');
+        clearWorkoutData(); // Clear persisted data after successful save
         setTimeout(() => {
           setSaveState('analyzing');
         }, 2000);
