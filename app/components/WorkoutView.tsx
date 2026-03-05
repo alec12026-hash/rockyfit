@@ -103,10 +103,9 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
       const endTime = parseInt(savedEndTime);
       const remaining = Math.floor((endTime - Date.now()) / 1000);
       if (remaining > 0) {
-        // Timer still valid - restore it
-        const targetFromStorage = parseInt(localStorage.getItem('rockyfit_timer_target') || '120');
-        setTimerTarget(targetFromStorage);
-        setTimerSeconds(targetFromStorage - remaining);
+        // Timer still valid - restore it with remaining seconds
+        setTimerTarget(remaining);
+        setTimerSeconds(remaining);
         setCurrentTimerExercise(savedExercise);
         setTimerActive(true);
       } else {
@@ -169,19 +168,21 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
     fetchHistory();
   }, [dayId]);
 
-  // Timer logic
+  // Timer logic - countdown
   useEffect(() => {
-    if (timerActive && timerSeconds < timerTarget) {
+    if (timerActive && timerSeconds > 0) {
       timerRef.current = setTimeout(() => {
-        setTimerSeconds(s => s + 1);
+        setTimerSeconds(s => s - 1);
       }, 1000);
-    } else if (timerActive && timerSeconds >= timerTarget) {
+    } else if (timerActive && timerSeconds <= 0) {
+      // Timer completed
       setTimerActive(false);
+      clearTimerStorage();
     }
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [timerActive, timerSeconds, timerTarget]);
+  }, [timerActive, timerSeconds]);
 
   const startRestTimer = (exerciseId: string, seconds: number) => {
     const endTime = Date.now() + (seconds * 1000);
@@ -487,7 +488,7 @@ export default function WorkoutView({ workout, dayId }: WorkoutViewProps) {
                           Skip
                         </button>
                         <button
-                          onClick={() => { setTimerSeconds(0); setTimerTarget(timerTarget + 30); }}
+                          onClick={() => { const newTarget = timerSeconds + 30; setTimerTarget(newTarget); setTimerSeconds(newTarget); }}
                           className="text-[10px] font-bold uppercase text-accent hover:text-white"
                         >
                           +30s
