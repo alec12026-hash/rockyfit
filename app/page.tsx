@@ -204,7 +204,7 @@ export default function Home() {
         </div>
       </header>
       {/* Daily Check-in - Inline input when no readiness data */}
-      {!loading && !coachData?.readiness && !inlineSuccess && (
+      {!loading && !inlineSuccess && (
         <section className="mb-4 border border-zinc-200 bg-zinc-50 rounded-md p-3">
           {!showInlineCheckin ? (
             <div className="flex items-center justify-between">
