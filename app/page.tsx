@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { WEEKS } from '@/lib/program';
 import { buildWeeksFromProgram } from '@/lib/training-schedule';
-import { ArrowRight, TrendingUp, TrendingDown, Brain, Calendar, Activity } from 'lucide-react';
+import { ArrowRight, TrendingUp, TrendingDown, Brain, Calendar, Activity, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface CoachData {
@@ -52,6 +52,12 @@ export default function Home() {
   const [coachingTime, setCoachingTime] = useState('9:00 PM');
   const [programData, setProgramData] = useState<ProgramData | null>(null);
   const [programWeeks, setProgramWeeks] = useState<WeekData[]>([]);
+  const [showInlineCheckin, setShowInlineCheckin] = useState(false);
+  const [inlineSubmitting, setInlineSubmitting] = useState(false);
+  const [inlineSuccess, setInlineSuccess] = useState(false);
+  const [energyLevel, setEnergyLevel] = useState<number | null>(null);
+  const [sorenessLevel, setSorenessLevel] = useState<number | null>(null);
+  const [checkinNotes, setCheckinNotes] = useState('');
 
   useEffect(() => {
     // Load coaching time from settings
@@ -128,6 +134,37 @@ export default function Home() {
       .finally(() => setLiftLoading(false));
   }, [activeLift]);
 
+  const handleInlineCheckin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInlineSubmitting(true);
+    try {
+      const res = await fetch('/api/health/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sleepHours: null, // User didn't provide sleep hours inline
+          energyLevel,
+          sorenessLevel,
+          mood: null,
+          notes: checkinNotes || undefined,
+        }),
+      });
+      if (res.ok) {
+        setInlineSuccess(true);
+        setShowInlineCheckin(false);
+        // Refresh coach data to get updated readiness
+        fetch('/api/coach/daily')
+          .then(r => r.json())
+          .then(data => setCoachData(data))
+          .catch(console.error);
+      }
+    } catch (error) {
+      console.error('Check-in failed:', error);
+    } finally {
+      setInlineSubmitting(false);
+    }
+  };
+
   const getZoneColor = (zone: string) => {
     switch (zone) {
       case 'green': return 'bg-green-100 text-green-700';
@@ -166,14 +203,90 @@ export default function Home() {
           <Brain size={16} className="text-white" />
         </div>
       </header>
-
       {/* Daily Check-in Nudge - shown when no readiness data */}
-      {!loading && !coachData?.readiness && (
+      {/* Daily Check-in - Inline input when no readiness data */}
+      {!loading && !coachData?.readiness && !inlineSuccess && (
         <section className="mb-4 border border-zinc-200 bg-zinc-50 rounded-md p-3">
-          <Link href="/check-in" className="flex items-center justify-between text-sm hover:text-primary transition-colors">
-            <span className="text-secondary">No check-in yet today →</span>
-            <span className="font-medium text-primary">Log how you're feeling</span>
-          </Link>
+          {!showInlineCheckin ? (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-secondary">How are you feeling today?</span>
+              <button
+                onClick={() => setShowInlineCheckin(true)}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                Log stats →
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleInlineCheckin} className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-primary uppercase">Quick Check-in</span>
+                <button
+                  type="button"
+                  onClick={() => setShowInlineCheckin(false)}
+                  className="text-xs text-zinc-400 hover:text-zinc-600"
+                >
+                  Cancel
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Energy</label>
+                  <div className="flex gap-1">
+                    {[1,2,3,4,5].map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setEnergyLevel(n)}
+                        className={`flex-1 py-1.5 text-xs font-bold rounded ${energyLevel === n ? 'bg-yellow-400 text-black' : 'bg-zinc-200 text-zinc-500'}`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Soreness</label>
+                  <div className="flex gap-1">
+                    {[1,2,3,4,5].map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setSorenessLevel(n)}
+                        className={`flex-1 py-1.5 text-xs font-bold rounded ${sorenessLevel === n ? 'bg-red-400 text-black' : 'bg-zinc-200 text-zinc-500'}`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <input
+                type="text"
+                value={checkinNotes}
+                onChange={(e) => setCheckinNotes(e.target.value)}
+                placeholder="Notes (optional)..."
+                className="w-full px-3 py-2 text-sm border border-zinc-200 rounded focus:outline-none focus:border-accent"
+              />
+              
+              <button
+                type="submit"
+                disabled={inlineSubmitting || (energyLevel === null && sorenessLevel === null)}
+                className="w-full py-2 bg-primary text-white text-sm font-bold uppercase rounded disabled:opacity-50"
+              >
+                {inlineSubmitting ? 'Saving...' : 'Save Check-in'}
+              </button>
+            </form>
+          )}
+        </section>
+      )}
+
+      {inlineSuccess && (
+        <section className="mb-4 border border-green-200 bg-green-50 rounded-md p-3 flex items-center gap-2">
+          <Check size={16} className="text-green-600" />
+          <span className="text-sm text-green-700 font-medium">Check-in saved!</span>
         </section>
       )}
 
