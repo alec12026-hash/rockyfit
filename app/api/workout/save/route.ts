@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     // Insert workout session
     const sessionResult = await sql`
       INSERT INTO workout_sessions (workout_id, week_num, day_num, total_volume, notes, readiness_before, rating, user_id, start_time, duration_minutes)
-      VALUES (${workoutId}, ${Number(weekNum)}, ${Number(dayNum)}, ${totalVolume}, ${notes || null}, ${readinessBefore || null}, ${rating || null}, ${userId}, ${startTime ? new Date(startTime) : null}, ${durationMinutes})
+      VALUES (${workoutId}, ${Number(weekNum)}, ${Number(dayNum)}, ${totalVolume}, ${notes || null}, ${readinessBefore || null}, ${rating || null}, ${userId}, ${startTime ? new Date(startTime).toISOString() : null}, ${durationMinutes})
       RETURNING id
     `;
 
