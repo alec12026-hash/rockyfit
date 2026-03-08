@@ -203,7 +203,6 @@ export default function Home() {
           <Brain size={16} className="text-white" />
         </div>
       </header>
-      {/* Daily Check-in Nudge - shown when no readiness data */}
       {/* Daily Check-in - Inline input when no readiness data */}
       {!loading && !coachData?.readiness && !inlineSuccess && (
         <section className="mb-4 border border-zinc-200 bg-zinc-50 rounded-md p-3">
