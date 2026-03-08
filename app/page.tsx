@@ -57,6 +57,8 @@ export default function Home() {
   const [inlineSuccess, setInlineSuccess] = useState(false);
   const [energyLevel, setEnergyLevel] = useState<number | null>(null);
   const [sorenessLevel, setSorenessLevel] = useState<number | null>(null);
+  const [stressLevel, setStressLevel] = useState<number | null>(null);
+  const [sleepHours, setSleepHours] = useState<number | null>(null);
   const [checkinNotes, setCheckinNotes] = useState('');
 
   useEffect(() => {
@@ -142,9 +144,10 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sleepHours: null, // User didn't provide sleep hours inline
+          sleepHours: sleepHours, // 1=≤5, 2=6, 3=7, 4=8, 5=9+
           energyLevel,
           sorenessLevel,
+          stressLevel,
           mood: null,
           notes: checkinNotes || undefined,
         }),
@@ -229,9 +232,32 @@ export default function Home() {
                 </button>
               </div>
               
-              <div className="grid grid-cols-2 gap-3">
+              {/* Sleep Hours */}
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Sleep Hours</label>
+                <div className="flex gap-1">
+                  {[
+                    { val: 1, label: '≤5' },
+                    { val: 2, label: '6' },
+                    { val: 3, label: '7' },
+                    { val: 4, label: '8' },
+                    { val: 5, label: '9+' }
+                  ].map(({ val, label }) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setSleepHours(val)}
+                      className={`flex-1 py-1.5 text-xs font-bold rounded ${sleepHours === val ? 'bg-blue-400 text-black' : 'bg-zinc-200 text-zinc-500'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Energy</label>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Energy <span className="text-zinc-300">(low→high)</span></label>
                   <div className="flex gap-1">
                     {[1,2,3,4,5].map(n => (
                       <button
@@ -246,7 +272,7 @@ export default function Home() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Soreness</label>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Soreness <span className="text-zinc-300">(low→high)</span></label>
                   <div className="flex gap-1">
                     {[1,2,3,4,5].map(n => (
                       <button
@@ -254,6 +280,21 @@ export default function Home() {
                         type="button"
                         onClick={() => setSorenessLevel(n)}
                         className={`flex-1 py-1.5 text-xs font-bold rounded ${sorenessLevel === n ? 'bg-red-400 text-black' : 'bg-zinc-200 text-zinc-500'}`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Stress <span className="text-zinc-300">(low→high)</span></label>
+                  <div className="flex gap-1">
+                    {[1,2,3,4,5].map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setStressLevel(n)}
+                        className={`flex-1 py-1.5 text-xs font-bold rounded ${stressLevel === n ? 'bg-purple-400 text-black' : 'bg-zinc-200 text-zinc-500'}`}
                       >
                         {n}
                       </button>
@@ -272,7 +313,7 @@ export default function Home() {
               
               <button
                 type="submit"
-                disabled={inlineSubmitting || (energyLevel === null && sorenessLevel === null)}
+                disabled={inlineSubmitting}
                 className="w-full py-2 bg-primary text-white text-sm font-bold uppercase rounded disabled:opacity-50"
               >
                 {inlineSubmitting ? 'Saving...' : 'Save Check-in'}
