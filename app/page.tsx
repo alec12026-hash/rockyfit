@@ -52,7 +52,7 @@ export default function Home() {
   const [coachingTime, setCoachingTime] = useState('9:00 PM');
   const [programData, setProgramData] = useState<ProgramData | null>(null);
   const [programWeeks, setProgramWeeks] = useState<WeekData[]>([]);
-  const [showInlineCheckin, setShowInlineCheckin] = useState(false);
+  const [showInlineCheckin, setShowInlineCheckin] = useState(true);
   const [inlineSubmitting, setInlineSubmitting] = useState(false);
   const [inlineSuccess, setInlineSuccess] = useState(false);
   const [energyLevel, setEnergyLevel] = useState<number | null>(null);
