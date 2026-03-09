@@ -255,51 +255,51 @@ export default function Home() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Energy <span className="text-zinc-300">(low→high)</span></label>
-                  <div className="flex gap-1">
-                    {[1,2,3,4,5].map(n => (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => setEnergyLevel(n)}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded ${energyLevel === n ? 'bg-yellow-400 text-black' : 'bg-zinc-200 text-zinc-500'}`}
-                      >
-                        {n}
-                      </button>
-                    ))}
-                  </div>
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Energy <span className="text-zinc-300">(low to high)</span></label>
+                <div className="flex gap-1">
+                  {[1,2,3,4,5].map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setEnergyLevel(n)}
+                      className={`flex-1 py-1.5 text-xs font-bold rounded ${energyLevel === n ? 'bg-yellow-400 text-black' : 'bg-zinc-200 text-zinc-500'}`}
+                    >
+                      {n}
+                    </button>
+                  ))}
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Soreness <span className="text-zinc-300">(low→high)</span></label>
-                  <div className="flex gap-1">
-                    {[1,2,3,4,5].map(n => (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => setSorenessLevel(n)}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded ${sorenessLevel === n ? 'bg-red-400 text-black' : 'bg-zinc-200 text-zinc-500'}`}
-                      >
-                        {n}
-                      </button>
-                    ))}
-                  </div>
+              </div>
+              
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Soreness <span className="text-zinc-300">(low to high)</span></label>
+                <div className="flex gap-1">
+                  {[1,2,3,4,5].map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setSorenessLevel(n)}
+                      className={`flex-1 py-1.5 text-xs font-bold rounded ${sorenessLevel === n ? 'bg-red-400 text-black' : 'bg-zinc-200 text-zinc-500'}`}
+                    >
+                      {n}
+                    </button>
+                  ))}
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Stress <span className="text-zinc-300">(low→high)</span></label>
-                  <div className="flex gap-1">
-                    {[1,2,3,4,5].map(n => (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => setStressLevel(n)}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded ${stressLevel === n ? 'bg-purple-400 text-black' : 'bg-zinc-200 text-zinc-500'}`}
-                      >
-                        {n}
-                      </button>
-                    ))}
-                  </div>
+              </div>
+              
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Stress <span className="text-zinc-300">(low to high)</span></label>
+                <div className="flex gap-1">
+                  {[1,2,3,4,5].map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setStressLevel(n)}
+                      className={`flex-1 py-1.5 text-xs font-bold rounded ${stressLevel === n ? 'bg-purple-400 text-black' : 'bg-zinc-200 text-zinc-500'}`}
+                    >
+                      {n}
+                    </button>
+                  ))}
                 </div>
               </div>
               
