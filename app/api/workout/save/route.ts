@@ -6,10 +6,13 @@ async function ensureWorkoutSchema() {
   await sql`
     CREATE TABLE IF NOT EXISTS workout_sessions (
       id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
       workout_id VARCHAR(50) NOT NULL,
       week_num INTEGER NOT NULL,
       day_num INTEGER NOT NULL,
       completed_at TIMESTAMP DEFAULT NOW(),
+      start_time TIMESTAMP,
+      duration_minutes INTEGER,
       total_volume INTEGER DEFAULT 0,
       notes TEXT,
       readiness_before INTEGER,
@@ -21,6 +24,7 @@ async function ensureWorkoutSchema() {
     CREATE TABLE IF NOT EXISTS workout_sets (
       id SERIAL PRIMARY KEY,
       session_id INTEGER REFERENCES workout_sessions(id),
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
       exercise_id VARCHAR(50) NOT NULL,
       set_num INTEGER NOT NULL,
       weight_lbs INTEGER,
@@ -34,6 +38,7 @@ async function ensureWorkoutSchema() {
   await sql`
     CREATE TABLE IF NOT EXISTS personal_records (
       id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
       exercise_id VARCHAR(50) NOT NULL,
       record_type VARCHAR(20) NOT NULL,
       value INTEGER NOT NULL,
@@ -42,6 +47,12 @@ async function ensureWorkoutSchema() {
       achieved_at TIMESTAMP DEFAULT NOW()
     )
   `;
+
+  await sql`ALTER TABLE workout_sessions ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE`;
+  await sql`ALTER TABLE workout_sessions ADD COLUMN IF NOT EXISTS start_time TIMESTAMP`;
+  await sql`ALTER TABLE workout_sessions ADD COLUMN IF NOT EXISTS duration_minutes INTEGER`;
+  await sql`ALTER TABLE workout_sets ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE`;
+  await sql`ALTER TABLE personal_records ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE`;
 }
 
 // POST /api/workout/save - Save completed workout

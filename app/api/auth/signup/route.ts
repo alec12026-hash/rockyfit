@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       const origin = new URL(req.url).origin;
       fetch(`${origin}/api/email/welcome`, {
         method: 'POST',
-        headers: { 'x-user-id': String(user.id) },
+        headers: { 'x-user-id': String(user.id), 'x-internal-api-key': process.env.INTERNAL_API_KEY || '' },
       }).catch((e) => console.error('Welcome email trigger failed:', e));
     } catch (e) {
       console.error('Welcome email trigger setup failed:', e);

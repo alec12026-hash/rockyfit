@@ -27,16 +27,7 @@ export async function getUserId(): Promise<number> {
  * @throws Error if not authenticated
  */
 export function getUserIdFromRequest(request: Request): number {
-  // First try header (set by middleware)
-  const headerUserId = request.headers.get('x-user-id');
-  if (headerUserId) {
-    const userId = parseInt(headerUserId, 10);
-    if (!isNaN(userId) && userId >= 1) {
-      return userId;
-    }
-  }
-  
-  // Fall back to cookie
+  // Prefer signed user cookie/session path for normal app requests.
   const cookieHeader = request.headers.get('cookie');
   if (cookieHeader) {
     const match = cookieHeader.match(/rockyfit_user=([^;]+)/);
@@ -47,8 +38,18 @@ export function getUserIdFromRequest(request: Request): number {
       }
     }
   }
-  
-  // Not authenticated - throw
+
+  // Internal server-to-server fallback.
+  const headerUserId = request.headers.get('x-user-id');
+  const internalKey = request.headers.get('x-internal-api-key');
+  const trustedInternal = process.env.INTERNAL_API_KEY && internalKey === process.env.INTERNAL_API_KEY;
+  if (trustedInternal && headerUserId) {
+    const userId = parseInt(headerUserId, 10);
+    if (!isNaN(userId) && userId >= 1) {
+      return userId;
+    }
+  }
+
   throw new Error('NOT_AUTHENTICATED');
 }
 

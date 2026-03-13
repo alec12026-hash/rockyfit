@@ -9,14 +9,6 @@ export async function GET(request: Request) {
   try {
     const userId = getUserIdFromRequest(request);
     
-    // For Alec (user_id=1), return hardcoded WEEKS
-    if (userId === 1) {
-      return NextResponse.json({
-        useDefault: true,
-        weeks: WEEKS
-      });
-    }
-
     // Query for user's active program
     const { rows } = await sql`
       SELECT program_data

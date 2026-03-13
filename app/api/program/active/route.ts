@@ -7,11 +7,6 @@ export async function GET(request: Request) {
   try {
     const userId = getUserIdFromRequest(request);
     
-    // For Alec (user_id=1), return useDefault since he uses hardcoded lib/program.ts
-    if (userId === 1) {
-      return NextResponse.json({ useDefault: true });
-    }
-
     // Ensure user_programs table exists
     await sql`
       CREATE TABLE IF NOT EXISTS user_programs (

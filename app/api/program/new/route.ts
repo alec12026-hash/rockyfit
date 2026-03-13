@@ -254,7 +254,7 @@ async function orchestrateResearchNarrativeWithOpenAI(input: {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = req.headers.get('x-user-id') || req.cookies.get('rockyfit_user')?.value;
+    const userId = req.cookies.get('rockyfit_user')?.value || (req.headers.get('x-internal-api-key') === process.env.INTERNAL_API_KEY ? req.headers.get('x-user-id') : null);
     const uid = parseInt(userId || '1', 10);
 
     // Ensure user_programs table exists
