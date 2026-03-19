@@ -1,5 +1,6 @@
 import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
+
 import { getUserIdFromRequest } from '@/lib/auth';
 
 async function ensureWorkoutSchema() {
@@ -131,6 +132,13 @@ export async function POST(request: Request) {
 
     // Get all PRs achieved in this workout
     const prs = insertedSets.filter((s: any) => s.is_pr);
+
+    // Trigger coaching report immediately via API (async, don't wait)
+    // Note: spawn doesn't work on Vercel, so we call the send-reports API directly
+    fetch(`${process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : 'http://localhost:3000'}/api/coach/send-reports?userId=${userId}&force=1`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    }).catch(e => console.error('Failed to trigger coaching report:', e));
 
     return NextResponse.json({ 
       success: true, 
